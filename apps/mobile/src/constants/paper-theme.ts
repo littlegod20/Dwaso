@@ -1,8 +1,8 @@
 import { MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
 
-import { Colors } from '@/constants/theme';
+import { Colors, type ThemeColor } from '@/constants/theme';
 
-function buildPaperTheme(base: MD3Theme, palette: (typeof Colors)['light']): MD3Theme {
+function buildPaperTheme(base: MD3Theme, palette: Record<ThemeColor, string>): MD3Theme {
   return {
     ...base,
     roundness: 16,
