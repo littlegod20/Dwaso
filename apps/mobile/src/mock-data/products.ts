@@ -25,6 +25,7 @@ export type Product = {
   status: ProductStatus;
   supplier: string;
   lastPriceChange?: PriceChange;
+  priceHistory?: number[];
   restockLog: RestockEntry[];
 };
 
@@ -40,6 +41,7 @@ export const products: Product[] = [
     status: 'low',
     supplier: 'Kwame Wholesale Foods',
     lastPriceChange: { date: 'Jul 12', from: 9.5, to: 10.0 },
+    priceHistory: [9.0, 9.2, 9.3, 9.5, 9.5, 9.8, 10.0],
     restockLog: [
       { id: 'r1', unitsAdded: 30, supplier: 'Kwame Wholesale', date: 'Jul 10', totalCost: 255.0 },
       { id: 'r2', unitsAdded: 24, supplier: 'Kwame Wholesale', date: 'Jun 28', totalCost: 204.0 },

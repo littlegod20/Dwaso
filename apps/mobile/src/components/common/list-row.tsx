@@ -10,12 +10,21 @@ type ListRowProps = {
   leading?: ReactNode;
   title: string;
   subtitle?: string;
+  subtitleLines?: number;
   trailing?: ReactNode;
   onPress?: () => void;
   showChevron?: boolean;
 };
 
-export function ListRow({ leading, title, subtitle, trailing, onPress, showChevron }: ListRowProps) {
+export function ListRow({
+  leading,
+  title,
+  subtitle,
+  subtitleLines = 1,
+  trailing,
+  onPress,
+  showChevron,
+}: ListRowProps) {
   const theme = useTheme();
 
   const content = (
@@ -26,7 +35,7 @@ export function ListRow({ leading, title, subtitle, trailing, onPress, showChevr
           {title}
         </ThemedText>
         {subtitle && (
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={subtitleLines}>
             {subtitle}
           </ThemedText>
         )}
