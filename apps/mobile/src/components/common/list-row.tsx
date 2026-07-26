@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Spacing, type ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type ListRowProps = {
@@ -11,6 +11,7 @@ type ListRowProps = {
   title: string;
   subtitle?: string;
   subtitleLines?: number;
+  subtitleColor?: ThemeColor;
   trailing?: ReactNode;
   onPress?: () => void;
   showChevron?: boolean;
@@ -21,6 +22,7 @@ export function ListRow({
   title,
   subtitle,
   subtitleLines = 1,
+  subtitleColor = 'textSecondary',
   trailing,
   onPress,
   showChevron,
@@ -35,7 +37,7 @@ export function ListRow({
           {title}
         </ThemedText>
         {subtitle && (
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={subtitleLines}>
+          <ThemedText type="small" themeColor={subtitleColor} numberOfLines={subtitleLines}>
             {subtitle}
           </ThemedText>
         )}
