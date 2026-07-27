@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Dwaso",
-    "slug": "dwaso",
+    "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "dwaso",
+    "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#17130F",
     "ios": {
