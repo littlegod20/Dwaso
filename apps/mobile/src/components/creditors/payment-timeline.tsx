@@ -3,42 +3,57 @@ import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { PaymentHistoryEntry } from '@/mock-data/creditors';
-import { formatCurrency } from '@/utils/format-currency';
+import type { LedgerHistoryEntry } from '@/lib/queries/creditors';
+import { useMoney } from '@/utils/format-currency';
+import { relativeTime } from '@/utils/relative-time';
 
 type PaymentTimelineProps = {
-  history: PaymentHistoryEntry[];
+  history: LedgerHistoryEntry[];
+};
+
+const LABELS: Record<LedgerHistoryEntry['kind'], string> = {
+  credit_sale: 'Bought on credit',
+  payment: 'Payment received',
+  adjustment: 'Balance adjusted',
+  write_off: 'Written off',
 };
 
 export function PaymentTimeline({ history }: PaymentTimelineProps) {
   const theme = useTheme();
+  const { format } = useMoney();
 
   return (
     <View>
       {history.map((entry, index) => {
-        const isSale = entry.type === 'sale';
-        const dotColor = isSale ? theme.danger : theme.success;
+        // A positive amount increases the debt, a negative one reduces it, so
+        // the sign alone decides the colour — no separate type flag to fall out
+        // of step with the number.
+        const increasesDebt = entry.amountMinor > 0;
         const isLast = index === history.length - 1;
 
         return (
           <View key={entry.id} style={styles.row}>
             <View style={styles.rail}>
-              <View style={[styles.dot, { backgroundColor: dotColor }]} />
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: increasesDebt ? theme.danger : theme.success },
+                ]}
+              />
               {!isLast && <View style={[styles.line, { backgroundColor: theme.border }]} />}
             </View>
             <View style={styles.content}>
               <ThemedText type="default" style={styles.title}>
-                {entry.label}
+                {entry.note || LABELS[entry.kind]}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                {entry.date}
+                {relativeTime(entry.occurredAt)}
               </ThemedText>
               <ThemedText
                 type="smallBold"
-                themeColor={isSale ? 'danger' : 'success'}
+                themeColor={increasesDebt ? 'danger' : 'success'}
                 style={styles.amount}>
-                {entry.amount >= 0 ? '+' : ''}
-                {formatCurrency(entry.amount)}
+                {format(entry.amountMinor, { showSign: true })}
               </ThemedText>
             </View>
           </View>

@@ -4,9 +4,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useScanStore } from '@/stores/scan';
 
 export function ScanTopBar() {
   const theme = useTheme();
+  const torch = useScanStore((state) => state.torch);
+  const toggleTorch = useScanStore((state) => state.toggleTorch);
 
   return (
     <View style={styles.row}>
@@ -16,11 +19,14 @@ export function ScanTopBar() {
         style={[styles.iconCircle, { backgroundColor: theme.backgroundElement }]}>
         <Feather name="x" size={20} color={theme.text} />
       </Pressable>
-      {/* TODO: wire up real flash/torch toggle once camera hardware is integrated */}
       <Pressable
+        onPress={toggleTorch}
         hitSlop={12}
-        style={[styles.iconCircle, { backgroundColor: theme.backgroundElement }]}>
-        <Feather name="zap" size={18} color={theme.text} />
+        style={[
+          styles.iconCircle,
+          { backgroundColor: torch ? theme.primary : theme.backgroundElement },
+        ]}>
+        <Feather name="zap" size={18} color={torch ? theme.primaryText : theme.text} />
       </Pressable>
     </View>
   );

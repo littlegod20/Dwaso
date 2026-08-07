@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, TextInput, View } from 'react-native';
@@ -10,15 +11,25 @@ import { ScreenContainer } from '@/components/common/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getProductById } from '@/mock-data/products';
-import { calculateMargin } from '@/utils/margin';
-import { formatCurrency } from '@/utils/format-currency';
+import { usePriceHistory, useProduct } from '@/lib/queries/products';
+import { updatePrice, useLocalMutation } from '@/lib/mutations';
+import { useMoney } from '@/utils/format-currency';
 import { getStatusMeta } from '@/utils/product-status';
+import { relativeTime } from '@/utils/relative-time';
+import { CURRENCY_META, marginPercent } from '@dwaso/domain';
 
 export default function EditPriceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const product = getProductById(id ?? '');
+  const { currency, format, parse, toMajor } = useMoney();
+
+  const { data: product } = useProduct(id);
+  const { data: priceHistory = [] } = usePriceHistory(id);
+
+  const [costText, setCostText] = useState<string | null>(null);
+  const [sellText, setSellText] = useState<string | null>(null);
+
+  const save = useLocalMutation(updatePrice);
 
   if (!product) {
     return (
@@ -30,21 +41,41 @@ export default function EditPriceScreen() {
   }
 
   const status = getStatusMeta(product.status);
-  const margin = calculateMargin(product.costPrice, product.sellPrice);
+  const costValue = costText ?? toMajor(product.costPriceMinor).toFixed(2);
+  const sellValue = sellText ?? toMajor(product.sellPriceMinor).toFixed(2);
+
+  const costPriceMinor = parse(Number(costValue) || 0);
+  const sellPriceMinor = parse(Number(sellValue) || 0);
+
+  const lastChange = priceHistory[priceHistory.length - 1];
+  const dirty =
+    costPriceMinor !== product.costPriceMinor || sellPriceMinor !== product.sellPriceMinor;
+
+  const submit = () => {
+    save.mutate(
+      { productId: product.id, costPriceMinor, sellPriceMinor },
+      { onSuccess: () => router.back() },
+    );
+  };
 
   return (
     <ScreenContainer>
-      {/* TODO: wire up save handler once persistence exists */}
-      <PageHeader title="Edit price" rightLabel="Save" onRightLabelPress={() => router.back()} />
+      <PageHeader title="Edit price" />
 
       <View style={styles.identity}>
-        <IconBadge icon="box" color={theme[status.variant]} backgroundColor={theme[`${status.variant}Bg`]} />
+        <IconBadge
+          icon="box"
+          color={theme[status.variant]}
+          backgroundColor={theme[`${status.variant}Bg`]}
+        />
         <View style={styles.identityText}>
           <ThemedText type="default" style={styles.productName}>
             {product.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {product.category} · SKU {product.sku}
+            {[product.category, product.sku ? `SKU ${product.sku}` : null]
+              .filter(Boolean)
+              .join(' · ') || 'No category set'}
           </ThemedText>
         </View>
       </View>
@@ -54,10 +85,12 @@ export default function EditPriceScreen() {
           Cost price
         </ThemedText>
         <View style={[styles.input, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText themeColor="textSecondary">₵</ThemedText>
+          <ThemedText themeColor="textSecondary">{CURRENCY_META[currency].symbol}</ThemedText>
           <TextInput
-            defaultValue={product.costPrice.toFixed(2)}
+            value={costValue}
+            onChangeText={setCostText}
             keyboardType="decimal-pad"
+            selectTextOnFocus
             style={[styles.inputText, { color: theme.text }]}
           />
         </View>
@@ -73,30 +106,44 @@ export default function EditPriceScreen() {
             styles.inputActive,
             { backgroundColor: theme.backgroundElement, borderColor: theme.primary },
           ]}>
-          <ThemedText themeColor="primary">₵</ThemedText>
+          <ThemedText themeColor="primary">{CURRENCY_META[currency].symbol}</ThemedText>
           <TextInput
-            defaultValue={product.sellPrice.toFixed(2)}
+            value={sellValue}
+            onChangeText={setSellText}
             keyboardType="decimal-pad"
+            selectTextOnFocus
             style={[styles.inputText, { color: theme.primary }]}
           />
           <Feather name="edit-2" size={16} color={theme.primary} />
         </View>
-        {product.lastPriceChange && (
+        {lastChange ? (
           <ThemedText type="small" themeColor="textSecondary">
-            Was {formatCurrency(product.lastPriceChange.from)} · changed {product.lastPriceChange.date}
+            Was {format(lastChange.fromSellMinor ?? 0)} · changed{' '}
+            {relativeTime(lastChange.occurredAt).toLowerCase()}
           </ThemedText>
-        )}
+        ) : null}
       </View>
 
-      <Card borderColor={theme.primary} style={[styles.marginCard, { backgroundColor: theme.warningBg }]}>
+      <Card
+        borderColor={theme.primary}
+        style={[styles.marginCard, { backgroundColor: theme.warningBg }]}>
         <ThemedText type="default">New margin</ThemedText>
         <ThemedText type="default" themeColor="primary" style={styles.marginValue}>
-          {margin}%
+          {marginPercent(sellPriceMinor, costPriceMinor)}%
         </ThemedText>
       </Card>
 
-      {/* TODO: submit handler — persist price change once backend exists */}
-      <AppButton label="Save price" onPress={() => router.back()} />
+      {/* Past sales keep the cost they were made at, so changing a price here
+          cannot rewrite margins the trader has already banked. */}
+      <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
+        Sales you have already recorded keep their original prices.
+      </ThemedText>
+
+      <AppButton
+        label={save.isPending ? 'Saving…' : 'Save price'}
+        disabled={!dirty || save.isPending}
+        onPress={submit}
+      />
       <ThemedText
         type="smallBold"
         themeColor="textSecondary"
@@ -114,6 +161,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   identityText: {
+    flex: 1,
     gap: Spacing.half,
     justifyContent: 'center',
   },
@@ -147,6 +195,9 @@ const styles = StyleSheet.create({
   },
   marginValue: {
     fontWeight: '700',
+  },
+  note: {
+    textAlign: 'center',
   },
   discard: {
     textAlign: 'center',

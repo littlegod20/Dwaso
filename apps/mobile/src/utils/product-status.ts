@@ -1,4 +1,4 @@
-import type { ProductStatus } from '@/mock-data/products';
+import type { ProductStatus } from '@dwaso/shared-types';
 
 export function getStatusMeta(status: ProductStatus): {
   label: string;

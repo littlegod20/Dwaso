@@ -5,18 +5,19 @@ import { Avatar } from '@/components/common/avatar';
 import { ListRow } from '@/components/common/list-row';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import type { Creditor } from '@/mock-data/creditors';
-import { formatCurrency } from '@/utils/format-currency';
+import type { CreditorListItem } from '@/lib/queries/creditors';
+import { useMoney } from '@/utils/format-currency';
 import { getCreditorStatusMeta, getInitials } from '@/utils/creditor-status';
 
 type CreditorRowProps = {
-  creditor: Creditor;
+  creditor: CreditorListItem;
 };
 
 export function CreditorRow({ creditor }: CreditorRowProps) {
   const theme = useTheme();
+  const { format } = useMoney();
   const status = getCreditorStatusMeta(creditor);
-  const isPaid = creditor.status === 'paid';
+  const isClear = creditor.status === 'clear';
 
   return (
     <ListRow
@@ -24,9 +25,11 @@ export function CreditorRow({ creditor }: CreditorRowProps) {
       leading={
         <Avatar
           label={getInitials(creditor.name)}
-          icon={isPaid ? 'check' : undefined}
+          icon={isClear ? 'check' : undefined}
           color={theme[status.variant === 'neutral' ? 'text' : status.variant]}
-          backgroundColor={status.variant === 'neutral' ? theme.backgroundElement : theme[`${status.variant}Bg`]}
+          backgroundColor={
+            status.variant === 'neutral' ? theme.backgroundElement : theme[`${status.variant}Bg`]
+          }
         />
       }
       title={creditor.name}
@@ -34,8 +37,8 @@ export function CreditorRow({ creditor }: CreditorRowProps) {
       subtitleColor={status.variant === 'neutral' ? 'textSecondary' : status.variant}
       trailing={
         <View style={styles.trailing}>
-          <ThemedText type="smallBold" themeColor={isPaid ? 'textSecondary' : 'text'}>
-            {formatCurrency(creditor.balance)}
+          <ThemedText type="smallBold" themeColor={isClear ? 'textSecondary' : 'text'}>
+            {format(creditor.balanceMinor)}
           </ThemedText>
         </View>
       }

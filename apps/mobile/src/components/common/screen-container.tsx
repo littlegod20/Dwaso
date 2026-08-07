@@ -10,6 +10,9 @@ type ScreenContainerProps = {
   scroll?: boolean;
   contentContainerStyle?: ScrollViewProps['contentContainerStyle'];
   edges?: Array<'top' | 'bottom'>;
+  /** Pull-to-refresh, which on every screen means "sync now" rather than
+   * "refetch", because the data is already local. */
+  refreshControl?: ScrollViewProps['refreshControl'];
 };
 
 export function ScreenContainer({
@@ -17,6 +20,7 @@ export function ScreenContainer({
   scroll = true,
   contentContainerStyle,
   edges = ['top', 'bottom'],
+  refreshControl,
 }: ScreenContainerProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -44,6 +48,7 @@ export function ScreenContainer({
         { paddingTop, paddingBottom },
         contentContainerStyle,
       ]}
+      refreshControl={refreshControl}
       showsVerticalScrollIndicator={false}>
       <View style={styles.centeredContent}>{children}</View>
     </ScrollView>

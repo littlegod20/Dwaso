@@ -5,19 +5,18 @@ import { IconBadge } from '@/components/common/icon-badge';
 import { ListRow } from '@/components/common/list-row';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
-import type { Product } from '@/mock-data/products';
-import { calculateMargin } from '@/utils/margin';
-import { formatCurrency } from '@/utils/format-currency';
+import type { ProductListItem } from '@/lib/queries/products';
+import { useMoney } from '@/utils/format-currency';
 import { getStatusMeta } from '@/utils/product-status';
 
 type ProductRowProps = {
-  product: Product;
+  product: ProductListItem;
 };
 
 export function ProductRow({ product }: ProductRowProps) {
   const theme = useTheme();
+  const { format } = useMoney();
   const status = getStatusMeta(product.status);
-  const margin = calculateMargin(product.costPrice, product.sellPrice);
 
   return (
     <ListRow
@@ -30,11 +29,13 @@ export function ProductRow({ product }: ProductRowProps) {
         />
       }
       title={product.name}
-      subtitle={`Cost ${formatCurrency(product.costPrice)} · Sell ${formatCurrency(product.sellPrice)} · Margin ${margin}%`}
+      subtitle={`Cost ${format(product.costPriceMinor)} · Sell ${format(product.sellPriceMinor)} · Margin ${product.marginPercent}%`}
       subtitleLines={2}
       trailing={
         <View style={styles.trailing}>
-          <ThemedText type="smallBold">{product.quantity} units</ThemedText>
+          <ThemedText type="smallBold">
+            {product.quantity} {product.quantity === 1 ? product.unit : `${product.unit}s`}
+          </ThemedText>
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, { backgroundColor: theme[status.variant] }]} />
             <ThemedText type="small" style={{ color: theme[status.variant] }}>

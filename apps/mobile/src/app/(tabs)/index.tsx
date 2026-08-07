@@ -1,37 +1,60 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { AlertBanner } from '@/components/common/alert-banner';
+import { EmptyState } from '@/components/common/empty-state';
 import { QuickActionButton } from '@/components/common/quick-action-button';
 import { ScreenContainer } from '@/components/common/screen-container';
 import { SectionHeader } from '@/components/common/section-header';
+import { SyncIndicator } from '@/components/common/sync-indicator';
 import { ActivityRow } from '@/components/home/activity-row';
 import { ProfitCard } from '@/components/home/profit-card';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { recentActivity } from '@/mock-data/activity';
-import { formatCurrency } from '@/utils/format-currency';
+import { useDashboard, useRecentActivity } from '@/lib/queries/dashboard';
+import { useSyncNow } from '@/lib/sync/provider';
+import { useSessionStore } from '@/stores/session';
+import { useSyncStore } from '@/stores/sync';
+import { useMoney } from '@/utils/format-currency';
 
-const BUSINESS_NAME = "Amaka's Provisions";
-const LOW_STOCK_COUNT = 6;
-const LOW_STOCK_PREVIEW = 'Rice, Sugar, Milo +3 more';
-const OVERDUE_TOTAL = 824.0;
-const OVERDUE_CUSTOMERS = 3;
+function greeting(now = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const { format } = useMoney();
+
+  const businessName = useSessionStore((state) => state.shop?.name ?? 'Your shop');
+  const syncStatus = useSyncStore((state) => state.status);
+  const syncNow = useSyncNow();
+
+  const dashboard = useDashboard();
+  const activity = useRecentActivity();
+
+  const data = dashboard.data;
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      refreshControl={
+        <RefreshControl
+          refreshing={syncStatus === 'syncing'}
+          onRefresh={syncNow}
+          tintColor={theme.primary}
+        />
+      }>
       <View style={styles.header}>
         <View>
           <ThemedText type="small" themeColor="textSecondary">
-            Good afternoon
+            {greeting()}
           </ThemedText>
           <ThemedText type="subtitle" style={styles.businessName}>
-            {BUSINESS_NAME}
+            {businessName}
           </ThemedText>
         </View>
         <Pressable
@@ -41,40 +64,74 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      <ProfitCard profit={112} revenue={326} cost={214} percentVsYesterday={12} />
+      <SyncIndicator />
 
-      <AlertBanner
-        icon="alert-triangle"
-        variant="warning"
-        title={`${LOW_STOCK_COUNT} products running low`}
-        subtitle={LOW_STOCK_PREVIEW}
-        onPress={() => router.push('/inventory')}
+      <ProfitCard
+        profitMinor={data?.todayProfitMinor ?? 0}
+        revenueMinor={data?.todayRevenueMinor ?? 0}
+        costMinor={data?.todayCostMinor ?? 0}
+        percentVsYesterday={data?.percentVsYesterday ?? null}
       />
-      <AlertBanner
-        icon="users"
-        variant="danger"
-        title={`${formatCurrency(OVERDUE_TOTAL)} overdue`}
-        subtitle={`${OVERDUE_CUSTOMERS} customers past due date`}
-        onPress={() => router.push('/creditors')}
-      />
+
+      {data && data.lowStockCount > 0 ? (
+        <AlertBanner
+          icon="alert-triangle"
+          variant="warning"
+          title={`${data.lowStockCount} product${data.lowStockCount === 1 ? '' : 's'} running low`}
+          subtitle={
+            data.lowStockCount > data.lowStockPreview.length
+              ? `${data.lowStockPreview.join(', ')} +${data.lowStockCount - data.lowStockPreview.length} more`
+              : data.lowStockPreview.join(', ')
+          }
+          onPress={() => router.push('/inventory')}
+        />
+      ) : null}
+
+      {data && data.overdueCount > 0 ? (
+        <AlertBanner
+          icon="users"
+          variant="danger"
+          title={`${format(data.overdueTotalMinor)} overdue`}
+          subtitle={`${data.overdueCount} customer${data.overdueCount === 1 ? '' : 's'} past due date`}
+          onPress={() => router.push('/creditors')}
+        />
+      ) : null}
 
       <View style={styles.quickActions}>
-        <QuickActionButton icon="camera" label="Scan" highlighted onPress={() => router.push('/scan')} />
-        {/* TODO: wire up navigation once a dedicated Add Product screen is designed */}
-        <QuickActionButton icon="plus" label="Add product" />
+        <QuickActionButton
+          icon="camera"
+          label="Scan"
+          highlighted
+          onPress={() => router.push('/scan')}
+        />
+        <QuickActionButton
+          icon="plus"
+          label="Add product"
+          onPress={() => router.push('/add-product')}
+        />
         <QuickActionButton
           icon="user-plus"
           label="Add creditor"
           onPress={() => router.push('/add-creditor')}
         />
-        <QuickActionButton icon="map-pin" label="Suppliers" onPress={() => router.push('/suppliers')} />
+        <QuickActionButton
+          icon="map-pin"
+          label="Suppliers"
+          onPress={() => router.push('/suppliers')}
+        />
       </View>
 
       <View style={styles.activitySection}>
         <SectionHeader title="Recent activity" />
-        {recentActivity.map((entry) => (
-          <ActivityRow key={entry.id} entry={entry} />
-        ))}
+        {activity.data?.length ? (
+          activity.data.map((entry) => <ActivityRow key={entry.id} entry={entry} />)
+        ) : (
+          <EmptyState
+            icon="activity"
+            title="Nothing yet today"
+            description="Sales, restocks and payments show up here as you record them."
+          />
+        )}
       </View>
     </ScreenContainer>
   );

@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppButton } from '@/components/common/app-button';
@@ -10,17 +11,22 @@ import { ScreenContainer } from '@/components/common/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getProductById } from '@/mock-data/products';
+import { useProduct } from '@/lib/queries/products';
+import { restock, useLocalMutation } from '@/lib/mutations';
+import { useMoney } from '@/utils/format-currency';
 import { getStatusMeta } from '@/utils/product-status';
-
-// TODO: quantity/cost/supplier are static for now — wire up a real stepper +
-// form state once this screen is connected to actual inventory data.
-const QUANTITY_TO_ADD = 24;
+import { CURRENCY_META } from '@dwaso/domain';
 
 export default function AddStockScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const product = getProductById(id ?? '');
+  const { currency, parse, toMajor } = useMoney();
+
+  const { data: product } = useProduct(id);
+  const [quantity, setQuantity] = useState(1);
+  const [costText, setCostText] = useState<string | null>(null);
+
+  const save = useLocalMutation(restock);
 
   if (!product) {
     return (
@@ -32,20 +38,35 @@ export default function AddStockScreen() {
   }
 
   const status = getStatusMeta(product.status);
-  const newStockLevel = product.quantity + QUANTITY_TO_ADD;
+
+  // Defaults to the last known cost so the common case — restocking at the same
+  // price — needs no typing at all.
+  const costValue = costText ?? toMajor(product.costPriceMinor).toFixed(2);
+  const unitCostMinor = parse(Number(costValue) || 0);
+
+  const submit = () => {
+    save.mutate(
+      { productId: product.id, quantity, unitCostMinor },
+      { onSuccess: () => router.back() },
+    );
+  };
 
   return (
     <ScreenContainer>
       <PageHeader title="Add stock" />
 
       <View style={styles.identity}>
-        <IconBadge icon="box" color={theme[status.variant]} backgroundColor={theme[`${status.variant}Bg`]} />
+        <IconBadge
+          icon="box"
+          color={theme[status.variant]}
+          backgroundColor={theme[`${status.variant}Bg`]}
+        />
         <View style={styles.identityText}>
           <ThemedText type="default" style={styles.productName}>
             {product.name}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            Current stock: {product.quantity} units
+            Current stock: {product.quantity} {product.unit}
           </ThemedText>
         </View>
       </View>
@@ -55,13 +76,17 @@ export default function AddStockScreen() {
           Quantity to add
         </ThemedText>
         <View style={styles.stepperRow}>
-          <Pressable style={[styles.stepperButton, { backgroundColor: theme.backgroundElement }]}>
+          <Pressable
+            onPress={() => setQuantity((value) => Math.max(1, value - 1))}
+            style={[styles.stepperButton, { backgroundColor: theme.backgroundElement }]}>
             <Feather name="minus" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="title" style={styles.stepperValue}>
-            {QUANTITY_TO_ADD}
+            {quantity}
           </ThemedText>
-          <Pressable style={[styles.stepperButton, { backgroundColor: theme.primary }]}>
+          <Pressable
+            onPress={() => setQuantity((value) => value + 1)}
+            style={[styles.stepperButton, { backgroundColor: theme.primary }]}>
             <Feather name="plus" size={20} color={theme.primaryText} />
           </Pressable>
         </View>
@@ -72,35 +97,34 @@ export default function AddStockScreen() {
           Cost per unit (this restock)
         </ThemedText>
         <View style={[styles.input, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText themeColor="textSecondary">₵</ThemedText>
+          <ThemedText themeColor="textSecondary">{CURRENCY_META[currency].symbol}</ThemedText>
           <TextInput
-            defaultValue={product.costPrice.toFixed(2)}
+            value={costValue}
+            onChangeText={setCostText}
             keyboardType="decimal-pad"
+            selectTextOnFocus
             style={[styles.inputText, { color: theme.text }]}
           />
         </View>
-      </View>
-
-      <View style={styles.field}>
         <ThemedText type="small" themeColor="textSecondary">
-          Supplier
+          Recording what you actually paid this time keeps your margin honest.
         </ThemedText>
-        {/* TODO: wire up supplier picker */}
-        <Pressable style={[styles.input, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText style={styles.supplierText}>{product.supplier}</ThemedText>
-          <Feather name="chevron-down" size={18} color={theme.textSecondary} />
-        </Pressable>
       </View>
 
-      <Card borderColor={theme.primary} style={[styles.summaryCard, { backgroundColor: theme.warningBg }]}>
+      <Card
+        borderColor={theme.primary}
+        style={[styles.summaryCard, { backgroundColor: theme.warningBg }]}>
         <ThemedText type="default">New stock level</ThemedText>
         <ThemedText type="default" themeColor="primary" style={styles.summaryValue}>
-          {newStockLevel} units
+          {product.quantity + quantity} {product.unit}
         </ThemedText>
       </Card>
 
-      {/* TODO: submit handler — persist restock entry once backend exists */}
-      <AppButton label={`Add ${QUANTITY_TO_ADD} units`} />
+      <AppButton
+        label={save.isPending ? 'Saving…' : `Add ${quantity} ${product.unit}`}
+        disabled={save.isPending}
+        onPress={submit}
+      />
     </ScreenContainer>
   );
 }
@@ -111,6 +135,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   identityText: {
+    flex: 1,
     gap: Spacing.half,
     justifyContent: 'center',
   },
@@ -156,10 +181,6 @@ const styles = StyleSheet.create({
   inputText: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '700',
-  },
-  supplierText: {
-    flex: 1,
     fontWeight: '700',
   },
   summaryCard: {

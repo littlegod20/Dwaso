@@ -1,100 +1,144 @@
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { Card } from '@/components/common/card';
+import { EmptyState } from '@/components/common/empty-state';
 import { ScreenContainer } from '@/components/common/screen-container';
 import { SectionHeader } from '@/components/common/section-header';
 import { StatusPill, type StatusPillVariant } from '@/components/common/status-pill';
+import { SyncIndicator } from '@/components/common/sync-indicator';
 import { RevenueCostChart } from '@/components/reports/revenue-cost-chart';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { stockReconciliation, totalCost, totalRevenue, weeklyReport } from '@/mock-data/reports';
-import { calculateMargin } from '@/utils/margin';
-import { formatCurrency } from '@/utils/format-currency';
+import { useReconciliation, useReport, type ReportPeriod } from '@/lib/queries/reports';
+import { useSyncNow } from '@/lib/sync/provider';
+import { useSyncStore } from '@/stores/sync';
+import { useMoney } from '@/utils/format-currency';
+import { marginPercent } from '@dwaso/domain';
 
-const PERIODS = ['Daily', 'Weekly', 'Monthly'] as const;
-const ACTIVE_PERIOD = 'Weekly';
+const PERIODS: { id: ReportPeriod; label: string }[] = [
+  { id: 'daily', label: 'Daily' },
+  { id: 'weekly', label: 'Weekly' },
+  { id: 'monthly', label: 'Monthly' },
+];
 
 export default function ReportsScreen() {
   const theme = useTheme();
-  const margin = calculateMargin(totalCost, totalRevenue);
+  const { format } = useMoney();
+  const [period, setPeriod] = useState<ReportPeriod>('weekly');
+
+  const syncStatus = useSyncStore((state) => state.status);
+  const syncNow = useSyncNow();
+
+  const { data: report } = useReport(period);
+  const { data: reconciliation = [] } = useReconciliation();
+
+  const hasSales = Boolean(report && report.totalRevenueMinor > 0);
 
   return (
-    <ScreenContainer>
+    <ScreenContainer
+      refreshControl={
+        <RefreshControl
+          refreshing={syncStatus === 'syncing'}
+          onRefresh={syncNow}
+          tintColor={theme.primary}
+        />
+      }>
       <ThemedText type="subtitle" style={styles.heading}>
         Reports
       </ThemedText>
 
-      {/* TODO: wire up period toggle — Weekly data is shown by default for now */}
+      <SyncIndicator />
+
       <View style={[styles.periodRow, { backgroundColor: theme.backgroundElement }]}>
-        {PERIODS.map((period) => (
-          <View
-            key={period}
+        {PERIODS.map((option) => (
+          <Pressable
+            key={option.id}
+            onPress={() => setPeriod(option.id)}
             style={[
               styles.periodSegment,
-              period === ACTIVE_PERIOD && { backgroundColor: theme.primary },
+              option.id === period && { backgroundColor: theme.primary },
             ]}>
             <ThemedText
               type="smallBold"
-              style={{ color: period === ACTIVE_PERIOD ? theme.primaryText : theme.textSecondary }}>
-              {period}
+              style={{ color: option.id === period ? theme.primaryText : theme.textSecondary }}>
+              {option.label}
             </ThemedText>
-          </View>
+          </Pressable>
         ))}
       </View>
 
-      <Card>
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
-            <ThemedText type="small" themeColor="textSecondary">
-              Revenue
-            </ThemedText>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: theme.textSecondary }]} />
-            <ThemedText type="small" themeColor="textSecondary">
-              Cost
-            </ThemedText>
-          </View>
-        </View>
-        <RevenueCostChart
-          labels={weeklyReport.labels}
-          revenue={weeklyReport.revenue}
-          cost={weeklyReport.cost}
-          revenueColor={theme.primary}
-          costColor={theme.textSecondary}
-        />
-      </Card>
-
-      <View style={styles.statsRow}>
-        <StatBox label="Revenue" value={formatCurrency(totalRevenue)} />
-        <StatBox label="Cost" value={formatCurrency(totalCost)} />
-        <StatBox label="Margin" value={`${margin}%`} accent />
-      </View>
-
-      <View style={styles.section}>
-        <SectionHeader title="Stock reconciliation" />
-        {stockReconciliation.map((entry) => {
-          const delta = entry.counted - entry.expected;
-          const variant: StatusPillVariant = delta < 0 ? 'danger' : delta > 0 ? 'warning' : 'success';
-          const deltaLabel = delta > 0 ? `+${delta}` : `${delta}`;
-
-          return (
-            <Card key={entry.id} style={styles.reconciliationRow}>
-              <View>
-                <ThemedText type="default" style={styles.reconciliationTitle}>
-                  {entry.productName}
-                </ThemedText>
+      {hasSales && report ? (
+        <>
+          <Card>
+            <View style={styles.legendRow}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: theme.primary }]} />
                 <ThemedText type="small" themeColor="textSecondary">
-                  Expected {entry.expected} · Counted {entry.counted}
+                  Revenue
                 </ThemedText>
               </View>
-              <StatusPill label={deltaLabel} variant={variant} />
-            </Card>
-          );
-        })}
-      </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: theme.textSecondary }]} />
+                <ThemedText type="small" themeColor="textSecondary">
+                  Cost
+                </ThemedText>
+              </View>
+            </View>
+            <RevenueCostChart
+              labels={report.labels}
+              revenue={report.revenue}
+              cost={report.cost}
+              revenueColor={theme.primary}
+              costColor={theme.textSecondary}
+            />
+          </Card>
+
+          <View style={styles.statsRow}>
+            <StatBox label="Revenue" value={format(report.totalRevenueMinor, { compact: true })} />
+            <StatBox label="Cost" value={format(report.totalCostMinor, { compact: true })} />
+            <StatBox
+              label="Margin"
+              value={`${marginPercent(report.totalRevenueMinor, report.totalCostMinor)}%`}
+              accent
+            />
+          </View>
+        </>
+      ) : (
+        <EmptyState
+          icon="bar-chart-2"
+          title="No sales in this period"
+          description="Record a sale and your revenue, cost and margin will appear here."
+        />
+      )}
+
+      {reconciliation.length ? (
+        <View style={styles.section}>
+          <SectionHeader title="Stock reconciliation" />
+          {reconciliation.map((entry) => {
+            const variant: StatusPillVariant =
+              entry.delta < 0 ? 'danger' : entry.delta > 0 ? 'warning' : 'success';
+
+            return (
+              <Card key={entry.id} style={styles.reconciliationRow}>
+                <View>
+                  <ThemedText type="default" style={styles.reconciliationTitle}>
+                    {entry.productName}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Expected {entry.expected} · Counted {entry.counted}
+                  </ThemedText>
+                </View>
+                <StatusPill
+                  label={entry.delta > 0 ? `+${entry.delta}` : `${entry.delta}`}
+                  variant={variant}
+                />
+              </Card>
+            );
+          })}
+        </View>
+      ) : null}
     </ScreenContainer>
   );
 }

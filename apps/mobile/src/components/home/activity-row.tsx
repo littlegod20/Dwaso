@@ -2,17 +2,19 @@ import { Feather } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import type { ActivityEntry } from '@/mock-data/activity';
+import type { ActivityItem } from '@/lib/queries/dashboard';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { formatCurrency } from '@/utils/format-currency';
+import { useMoney } from '@/utils/format-currency';
+import { relativeTime } from '@/utils/relative-time';
 
 type ActivityRowProps = {
-  entry: ActivityEntry;
+  entry: ActivityItem;
 };
 
 export function ActivityRow({ entry }: ActivityRowProps) {
   const theme = useTheme();
+  const { format } = useMoney();
   const isIn = entry.direction === 'in';
   const color = isIn ? theme.success : theme.text;
 
@@ -30,12 +32,11 @@ export function ActivityRow({ entry }: ActivityRowProps) {
           {entry.title}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {entry.time}
+          {relativeTime(entry.occurredAt)}
         </ThemedText>
       </View>
       <ThemedText type="smallBold" style={{ color }}>
-        {entry.amount >= 0 ? '+' : ''}
-        {formatCurrency(entry.amount)}
+        {format(entry.amountMinor, { showSign: true })}
       </ThemedText>
     </View>
   );
