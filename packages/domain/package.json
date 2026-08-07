@@ -1,7 +1,7 @@
 {
-  "name": "@dwaso/shared-types",
+  "name": "@dwaso/domain",
   "version": "1.0.0",
-  "description": "API contracts and domain schemas shared by the Dwaso API and mobile client",
+  "description": "Pure domain calculations shared by the Dwaso API and mobile client",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -17,13 +17,16 @@
   ],
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "license": "ISC",
   "dependencies": {
-    "zod": "^4.4.3"
+    "@dwaso/shared-types": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   }
 }
