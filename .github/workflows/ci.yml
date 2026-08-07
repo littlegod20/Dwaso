@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  verify:
+    name: Typecheck, lint and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm turbo run build --filter='./packages/*'
+
+      - run: pnpm turbo run typecheck
+
+      - run: pnpm exec eslint .
+
+      - run: pnpm exec prettier --check .
+
+      - name: Unit tests
+        run: pnpm turbo run test
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # pgvector is required by the scan module's embedding tier.
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dwaso_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/dwaso_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: integration-test-secret-that-is-long-enough-to-pass
+      SMS_PROVIDER: console
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm turbo run build --filter='./packages/*'
+
+      - name: Run migrations
+        run: pnpm --filter api db:migrate
+
+      - name: Integration tests
+        run: pnpm --filter api test
