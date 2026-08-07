@@ -1,4 +1,5 @@
 import type { LoggerOptions } from 'pino';
+import { trace } from '@opentelemetry/api';
 import type { Env } from './env.js';
 
 /**
@@ -29,6 +30,18 @@ export function loggerOptions(env: Env): LoggerOptions {
   return {
     level: env.LOG_LEVEL,
     redact: { paths: REDACTED_PATHS, censor: '[redacted]' },
+    // Stamps every line with the trace it belongs to. Without this the traces
+    // tell you which request was slow and the logs tell you what went wrong,
+    // and there is no way to line the two up.
+    ...(env.OTEL_ENABLED
+      ? {
+          mixin() {
+            const context = trace.getActiveSpan()?.spanContext();
+            if (!context) return {};
+            return { trace_id: context.traceId, span_id: context.spanId };
+          },
+        }
+      : {}),
     ...(env.NODE_ENV === 'development'
       ? {
           transport: {

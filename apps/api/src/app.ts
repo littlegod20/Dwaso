@@ -1,4 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import { FastifyOtelInstrumentation } from '@fastify/otel';
+import { trace } from '@opentelemetry/api';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
@@ -50,6 +52,25 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  if (env.OTEL_ENABLED) {
+    // Names spans after the route pattern rather than the URL, so /products/:id
+    // aggregates instead of splitting into one span per product.
+    const otel = new FastifyOtelInstrumentation({
+      ignorePaths: (route) => route.url === '/healthz' || route.url === '/readyz',
+    });
+    await app.register(otel.plugin());
+
+    // A slow request is only actionable once you know whose shop it was: the
+    // shops with thousands of products behave nothing like a new one.
+    // preHandler rather than onRequest: authentication is itself an onRequest
+    // hook, so the shop is not known yet at that point.
+    app.addHook('preHandler', async (request) => {
+      if (request.auth?.shopId) {
+        trace.getActiveSpan()?.setAttribute('dwaso.shop_id', request.auth.shopId);
+      }
+    });
+  }
 
   await app.register(errorHandlerPlugin);
   await app.register(helmet, { contentSecurityPolicy: env.NODE_ENV === 'production' });

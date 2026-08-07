@@ -1,6 +1,7 @@
 import { buildApp } from './app.js';
 import { loadEnv } from './config/env.js';
 import { startWorkers } from './jobs/workers/index.js';
+import { shutdownTelemetry } from './telemetry.js';
 
 const SHUTDOWN_SIGNALS = ['SIGTERM', 'SIGINT'] as const;
 const FORCED_SHUTDOWN_MS = 15_000;
@@ -30,6 +31,7 @@ async function main() {
     try {
       await workers.stop();
       await app.close();
+      await shutdownTelemetry();
       clearTimeout(forced);
       process.exit(0);
     } catch (error) {
