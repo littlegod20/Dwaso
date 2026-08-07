@@ -59,8 +59,12 @@ export default function OnboardingPermissionsScreen() {
       style={[
         styles.container,
         { paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three },
-      ]}>
-      <OnboardingNav onBack={() => router.back()} onSkip={() => router.push('/onboarding/sign-in')} />
+      ]}
+    >
+      <OnboardingNav
+        onBack={() => router.back()}
+        onSkip={() => router.push('/onboarding/sign-in')}
+      />
 
       <View style={styles.header}>
         <ThemedText type="title" style={styles.headline}>
@@ -78,7 +82,8 @@ export default function OnboardingPermissionsScreen() {
           return (
             <View
               key={permission.id}
-              style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+              style={[styles.card, { backgroundColor: theme.backgroundElement }]}
+            >
               <View style={[styles.iconBadge, { backgroundColor: theme.warningBg }]}>
                 <Feather name={permission.icon} size={22} color={theme.primary} />
               </View>
@@ -96,7 +101,8 @@ export default function OnboardingPermissionsScreen() {
                 style={[
                   styles.allowButton,
                   { borderColor: allowed ? theme.success : theme.border },
-                ]}>
+                ]}
+              >
                 <ThemedText type="smallBold" themeColor={allowed ? 'success' : 'primary'}>
                   {allowed ? 'Allowed' : 'Allow'}
                 </ThemedText>

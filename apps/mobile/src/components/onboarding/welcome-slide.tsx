@@ -37,7 +37,12 @@ export function WelcomeSlide({
   const insets = useSafeAreaInsets();
 
   return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three }]}>
+    <ThemedView
+      style={[
+        styles.container,
+        { paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three },
+      ]}
+    >
       <OnboardingNav onBack={onBack} onSkip={onSkip} />
 
       <View style={styles.body}>

@@ -28,14 +28,11 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   const existing = await Notifications.getPermissionsAsync();
-  const status = existing.granted
-    ? existing
-    : await Notifications.requestPermissionsAsync();
+  const status = existing.granted ? existing : await Notifications.requestPermissionsAsync();
 
   if (!status.granted) return null;
 
-  const projectId =
-    Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
   if (!projectId) return null;
 

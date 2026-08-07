@@ -14,7 +14,13 @@ type RevenueCostChartProps = {
   height?: number;
 };
 
-function toPolylinePoints(data: number[], min: number, range: number, width: number, height: number) {
+function toPolylinePoints(
+  data: number[],
+  min: number,
+  range: number,
+  width: number,
+  height: number,
+) {
   const paddingY = 8;
   return data
     .map((value, index) => {

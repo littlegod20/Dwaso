@@ -16,7 +16,8 @@ export function ScanTopBar() {
       <Pressable
         onPress={() => router.back()}
         hitSlop={12}
-        style={[styles.iconCircle, { backgroundColor: theme.backgroundElement }]}>
+        style={[styles.iconCircle, { backgroundColor: theme.backgroundElement }]}
+      >
         <Feather name="x" size={20} color={theme.text} />
       </Pressable>
       <Pressable
@@ -25,7 +26,8 @@ export function ScanTopBar() {
         style={[
           styles.iconCircle,
           { backgroundColor: torch ? theme.primary : theme.backgroundElement },
-        ]}>
+        ]}
+      >
         <Feather name="zap" size={18} color={torch ? theme.primaryText : theme.text} />
       </Pressable>
     </View>

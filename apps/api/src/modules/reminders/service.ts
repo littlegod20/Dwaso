@@ -22,9 +22,7 @@ export class RemindersService {
     return tenant.db
       .select()
       .from(reminderSchedules)
-      .where(
-        and(eq(reminderSchedules.shopId, tenant.shopId), isNull(reminderSchedules.deletedAt)),
-      )
+      .where(and(eq(reminderSchedules.shopId, tenant.shopId), isNull(reminderSchedules.deletedAt)))
       .orderBy(desc(reminderSchedules.createdAt));
   }
 
@@ -186,11 +184,7 @@ export class RemindersService {
   }
 
   private async loadShop(tenant: TenantContext) {
-    const [shop] = await tenant.db
-      .select()
-      .from(shops)
-      .where(eq(shops.id, tenant.shopId))
-      .limit(1);
+    const [shop] = await tenant.db.select().from(shops).where(eq(shops.id, tenant.shopId)).limit(1);
 
     if (!shop) throw AppError.notFound('Shop');
     return shop;

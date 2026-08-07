@@ -69,13 +69,15 @@ export default function ScanRecognizedScreen() {
               style={[
                 styles.matchPill,
                 { backgroundColor: matched ? theme.primary : theme.backgroundElement },
-              ]}>
+              ]}
+            >
               {matched ? (
                 <View style={[styles.matchDot, { backgroundColor: theme.primaryText }]} />
               ) : null}
               <ThemedText
                 type="smallBold"
-                style={matched ? { color: theme.primaryText } : undefined}>
+                style={matched ? { color: theme.primaryText } : undefined}
+              >
                 {matched
                   ? `${product?.name} · ${Math.round(candidate.confidence * 100)}%`
                   : candidate.queued
@@ -91,7 +93,8 @@ export default function ScanRecognizedScreen() {
         style={[
           styles.peekCard,
           { backgroundColor: theme.card, paddingBottom: insets.bottom + Spacing.three },
-        ]}>
+        ]}
+      >
         <View style={styles.peekHandle} />
 
         {product && status ? (

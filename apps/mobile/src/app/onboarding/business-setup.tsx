@@ -55,7 +55,8 @@ export default function OnboardingBusinessSetupScreen() {
       style={[
         styles.container,
         { paddingTop: insets.top + Spacing.four, paddingBottom: insets.bottom + Spacing.three },
-      ]}>
+      ]}
+    >
       <View style={styles.header}>
         <ThemedText type="title" style={styles.headline}>
           Set up your shop

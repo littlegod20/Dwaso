@@ -244,8 +244,7 @@ export class SyncService {
       const existingDevice = (existing.deviceId as string | null) ?? '';
 
       const loses =
-        incomingAt < existingAt ||
-        (incomingAt === existingAt && existingDevice > tenant.deviceId);
+        incomingAt < existingAt || (incomingAt === existingAt && existingDevice > tenant.deviceId);
 
       if (loses) {
         return {
@@ -292,9 +291,7 @@ export class SyncService {
 
     if (mutation.entity === 'sale' || mutation.entity === 'sale_item') {
       const occurredAt = values.occurredAt;
-      affected.dates.add(
-        shopDate(occurredAt instanceof Date ? occurredAt : new Date(), timezone),
-      );
+      affected.dates.add(shopDate(occurredAt instanceof Date ? occurredAt : new Date(), timezone));
     }
   }
 

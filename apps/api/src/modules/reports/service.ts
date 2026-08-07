@@ -274,17 +274,11 @@ export class ReportsService {
       })),
     ];
 
-    return entries
-      .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
-      .slice(0, limit);
+    return entries.sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, limit);
   }
 
   private async loadShop(tenant: TenantContext) {
-    const [shop] = await tenant.db
-      .select()
-      .from(shops)
-      .where(eq(shops.id, tenant.shopId))
-      .limit(1);
+    const [shop] = await tenant.db.select().from(shops).where(eq(shops.id, tenant.shopId)).limit(1);
 
     if (!shop) throw AppError.notFound('Shop');
     return shop;

@@ -21,7 +21,10 @@ export function useMoney() {
   );
 
   const parse = useCallback((amount: number) => toMinor(amount, currency), [currency]);
-  const toMajor = useCallback((amountMinor: number) => fromMinor(amountMinor, currency), [currency]);
+  const toMajor = useCallback(
+    (amountMinor: number) => fromMinor(amountMinor, currency),
+    [currency],
+  );
 
   return { currency, format, parse, toMajor };
 }

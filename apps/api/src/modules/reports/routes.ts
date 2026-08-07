@@ -16,9 +16,7 @@ export async function reportRoutes(app: FastifyInstance) {
     async (request) => service.summary(requireTenant(request.tenant), request.query),
   );
 
-  routes.get(
-    '/dashboard',
-    { schema: { response: { 200: DashboardSchema } } },
-    async (request) => service.dashboard(requireTenant(request.tenant)),
+  routes.get('/dashboard', { schema: { response: { 200: DashboardSchema } } }, async (request) =>
+    service.dashboard(requireTenant(request.tenant)),
   );
 }

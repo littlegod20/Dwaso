@@ -2,7 +2,6 @@ import { Feather } from '@expo/vector-icons';
 import { StyleSheet, type ViewStyle } from 'react-native';
 import { Button } from 'react-native-paper';
 
-import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type AppButtonProps = {
@@ -40,7 +39,8 @@ export function AppButton({
         textColor={theme.text}
         style={[styles.button, { borderColor: theme.border }, style]}
         contentStyle={styles.content}
-        labelStyle={styles.label}>
+        labelStyle={styles.label}
+      >
         {label}
       </Button>
     );
@@ -56,7 +56,8 @@ export function AppButton({
       textColor={theme.primaryText}
       style={[styles.button, style]}
       contentStyle={styles.content}
-      labelStyle={styles.label}>
+      labelStyle={styles.label}
+    >
       {label}
     </Button>
   );

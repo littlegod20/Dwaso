@@ -47,7 +47,10 @@ type EntityConfig = {
 export const ENTITY_REGISTRY: Record<SyncEntity, EntityConfig> = {
   shop: { table: shops, schema: UpdateShopSchema },
   product: { table: products, schema: ProductSchema.partial({ createdAt: true }) },
-  product_barcode: { table: productBarcodes, schema: ProductBarcodeSchema.partial({ createdAt: true }) },
+  product_barcode: {
+    table: productBarcodes,
+    schema: ProductBarcodeSchema.partial({ createdAt: true }),
+  },
   creditor: { table: creditors, schema: CreditorSchema.partial({ createdAt: true }) },
   supplier: { table: suppliers, schema: SupplierSchema.partial({ createdAt: true }) },
   reminder_schedule: {

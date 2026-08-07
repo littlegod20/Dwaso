@@ -47,7 +47,8 @@ export default function HomeScreen() {
           onRefresh={syncNow}
           tintColor={theme.primary}
         />
-      }>
+      }
+    >
       <View style={styles.header}>
         <View>
           <ThemedText type="small" themeColor="textSecondary">
@@ -59,7 +60,8 @@ export default function HomeScreen() {
         </View>
         <Pressable
           onPress={() => router.push('/inventory')}
-          style={[styles.headerIcon, { backgroundColor: theme.primary }]}>
+          style={[styles.headerIcon, { backgroundColor: theme.primary }]}
+        >
           <Feather name="box" size={20} color={theme.primaryText} />
         </Pressable>
       </View>

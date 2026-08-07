@@ -124,7 +124,8 @@ export default function SuppliersScreen() {
               supplier.phone ? (
                 <Pressable
                   onPress={() => call(supplier.phone)}
-                  style={[styles.callButton, { backgroundColor: theme.backgroundElement }]}>
+                  style={[styles.callButton, { backgroundColor: theme.backgroundElement }]}
+                >
                   <Feather name="phone" size={18} color={theme.primary} />
                 </Pressable>
               ) : undefined

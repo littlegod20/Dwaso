@@ -53,7 +53,8 @@ export default function InventoryScreen() {
           onRefresh={syncNow}
           tintColor={theme.primary}
         />
-      }>
+      }
+    >
       <View style={styles.header}>
         <ThemedText type="subtitle">Inventory</ThemedText>
         <Pressable
@@ -61,7 +62,8 @@ export default function InventoryScreen() {
           style={[
             styles.addButton,
             { backgroundColor: theme.backgroundElement, borderColor: theme.border },
-          ]}>
+          ]}
+        >
           <Feather name="plus" size={20} color={theme.primary} />
         </Pressable>
       </View>

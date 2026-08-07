@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
 
 type SectionHeaderProps = {
   title: string;

@@ -17,10 +17,8 @@ export async function supplierRoutes(app: FastifyInstance) {
 
   routes.addHook('onRequest', app.authenticate);
 
-  routes.get(
-    '/',
-    { schema: { response: { 200: z.array(SupplierViewSchema) } } },
-    async (request) => service.list(requireTenant(request.tenant)),
+  routes.get('/', { schema: { response: { 200: z.array(SupplierViewSchema) } } }, async (request) =>
+    service.list(requireTenant(request.tenant)),
   );
 
   routes.get(

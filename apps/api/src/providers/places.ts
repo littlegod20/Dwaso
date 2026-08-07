@@ -135,20 +135,11 @@ class EmptyDirectory implements SupplierDirectory {
 
 export function createSupplierDirectory(env: Env, redis: Redis): SupplierDirectory {
   if (!env.GOOGLE_PLACES_API_KEY) return new EmptyDirectory();
-  return new GooglePlacesDirectory(
-    env.GOOGLE_PLACES_API_KEY,
-    redis,
-    env.PLACES_CACHE_TTL_SECONDS,
-  );
+  return new GooglePlacesDirectory(env.GOOGLE_PLACES_API_KEY, redis, env.PLACES_CACHE_TTL_SECONDS);
 }
 
 /** Great-circle distance in kilometres, for sorting and display. */
-export function distanceKm(
-  fromLat: number,
-  fromLon: number,
-  toLat: number,
-  toLon: number,
-): number {
+export function distanceKm(fromLat: number, fromLon: number, toLat: number, toLon: number): number {
   const earthRadiusKm = 6371;
   const toRad = (value: number) => (value * Math.PI) / 180;
 

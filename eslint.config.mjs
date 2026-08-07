@@ -25,6 +25,31 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'smart'],
+      // Metro resolves asset paths at build time, so a bundled image or font is
+      // reached with require() and nothing else. Everything importable stays
+      // under the ban.
+      '@typescript-eslint/no-require-imports': [
+        'error',
+        { allow: ['\\.(png|jpe?g|gif|webp|svg|ttf|otf|mp3|mp4)$'] },
+      ],
+    },
+  },
+  {
+    // Plain .js in this repo means a Node maintenance script, not app code.
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        require: 'readonly',
+        module: 'writable',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-console': 'off',
     },
   },
   {

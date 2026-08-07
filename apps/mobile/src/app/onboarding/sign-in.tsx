@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlertBanner } from '@/components/common/alert-banner';
@@ -51,12 +58,14 @@ export default function SignInScreen() {
       style={[
         styles.container,
         { paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three },
-      ]}>
+      ]}
+    >
       <OnboardingNav onBack={() => router.back()} />
 
       <KeyboardAvoidingView
         style={styles.body}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={styles.header}>
           <ThemedText type="title" style={styles.headline}>
             What&apos;s your number?

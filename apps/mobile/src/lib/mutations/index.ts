@@ -443,9 +443,7 @@ export async function recordPayment(
 }
 
 /** Wraps a local write so screens get pending state and automatic refetching. */
-export function useLocalMutation<TInput, TResult>(
-  mutationFn: (input: TInput) => Promise<TResult>,
-) {
+export function useLocalMutation<TInput, TResult>(mutationFn: (input: TInput) => Promise<TResult>) {
   const queryClient = useQueryClient();
 
   return useMutation({

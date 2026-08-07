@@ -92,7 +92,8 @@ export default function CreditorDetailScreen() {
         </ThemedText>
         <ThemedText
           type="smallBold"
-          themeColor={status.variant === 'neutral' ? 'textSecondary' : status.variant}>
+          themeColor={status.variant === 'neutral' ? 'textSecondary' : status.variant}
+        >
           {dueLine}
         </ThemedText>
         {creditor.phone ? (

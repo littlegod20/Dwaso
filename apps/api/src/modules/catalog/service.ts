@@ -2,7 +2,12 @@ import type { CreateProduct, ProductView, UpdatePrice, UpdateProduct } from '@dw
 import type { Database } from '../../db/client.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
-import { nextSeq, reserveSeqBlock, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
+import {
+  nextSeq,
+  reserveSeqBlock,
+  withTenantTransaction,
+  type TenantContext,
+} from '../../lib/tenant.js';
 import { applyStockDelta } from '../projections/service.js';
 import { products, stockMovements } from '../../db/schema/index.js';
 import * as repo from './repo.js';

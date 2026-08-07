@@ -30,11 +30,7 @@ export function ScreenContainer({
 
   if (!scroll) {
     return (
-      <View
-        style={[
-          styles.flex,
-          { backgroundColor: theme.background, paddingTop, paddingBottom },
-        ]}>
+      <View style={[styles.flex, { backgroundColor: theme.background, paddingTop, paddingBottom }]}>
         <View style={styles.centeredContent}>{children}</View>
       </View>
     );
@@ -49,7 +45,8 @@ export function ScreenContainer({
         contentContainerStyle,
       ]}
       refreshControl={refreshControl}
-      showsVerticalScrollIndicator={false}>
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.centeredContent}>{children}</View>
     </ScrollView>
   );

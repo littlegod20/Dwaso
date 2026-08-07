@@ -85,7 +85,8 @@ export default function RecordPaymentScreen() {
 
       <Card
         borderColor={remaining <= 0 ? theme.success : theme.primary}
-        style={{ backgroundColor: remaining <= 0 ? theme.successBg : theme.warningBg }}>
+        style={{ backgroundColor: remaining <= 0 ? theme.successBg : theme.warningBg }}
+      >
         <View style={styles.summaryRow}>
           <ThemedText type="default">
             {remaining <= 0 ? 'Settles this account' : 'Remaining after payment'}
@@ -93,7 +94,8 @@ export default function RecordPaymentScreen() {
           <ThemedText
             type="default"
             themeColor={remaining <= 0 ? 'success' : 'primary'}
-            style={styles.summaryValue}>
+            style={styles.summaryValue}
+          >
             {format(Math.max(0, remaining))}
           </ThemedText>
         </View>

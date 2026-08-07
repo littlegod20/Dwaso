@@ -44,7 +44,8 @@ export default function ReportsScreen() {
           onRefresh={syncNow}
           tintColor={theme.primary}
         />
-      }>
+      }
+    >
       <ThemedText type="subtitle" style={styles.heading}>
         Reports
       </ThemedText>
@@ -59,10 +60,12 @@ export default function ReportsScreen() {
             style={[
               styles.periodSegment,
               option.id === period && { backgroundColor: theme.primary },
-            ]}>
+            ]}
+          >
             <ThemedText
               type="smallBold"
-              style={{ color: option.id === period ? theme.primaryText : theme.textSecondary }}>
+              style={{ color: option.id === period ? theme.primaryText : theme.textSecondary }}
+            >
               {option.label}
             </ThemedText>
           </Pressable>

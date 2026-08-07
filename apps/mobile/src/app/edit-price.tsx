@@ -105,7 +105,8 @@ export default function EditPriceScreen() {
             styles.input,
             styles.inputActive,
             { backgroundColor: theme.backgroundElement, borderColor: theme.primary },
-          ]}>
+          ]}
+        >
           <ThemedText themeColor="primary">{CURRENCY_META[currency].symbol}</ThemedText>
           <TextInput
             value={sellValue}
@@ -126,7 +127,8 @@ export default function EditPriceScreen() {
 
       <Card
         borderColor={theme.primary}
-        style={[styles.marginCard, { backgroundColor: theme.warningBg }]}>
+        style={[styles.marginCard, { backgroundColor: theme.warningBg }]}
+      >
         <ThemedText type="default">New margin</ThemedText>
         <ThemedText type="default" themeColor="primary" style={styles.marginValue}>
           {marginPercent(sellPriceMinor, costPriceMinor)}%
@@ -148,7 +150,8 @@ export default function EditPriceScreen() {
         type="smallBold"
         themeColor="textSecondary"
         style={styles.discard}
-        onPress={() => router.back()}>
+        onPress={() => router.back()}
+      >
         Discard changes
       </ThemedText>
     </ScreenContainer>

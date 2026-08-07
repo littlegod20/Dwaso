@@ -27,7 +27,7 @@ export const TabButton = forwardRef<View, TabButtonProps>(
         </ThemedText>
       </Pressable>
     );
-  }
+  },
 );
 
 export function AppTabBar(props: TabListProps) {
@@ -51,7 +51,11 @@ export function AppTabBar(props: TabListProps) {
         onPress={() => router.push('/scan')}
         accessibilityRole="button"
         accessibilityLabel="Scan"
-        style={[styles.scanButton, { backgroundColor: theme.primary, borderColor: theme.background }]}>
+        style={[
+          styles.scanButton,
+          { backgroundColor: theme.primary, borderColor: theme.background },
+        ]}
+      >
         <Feather name="camera" size={24} color={theme.primaryText} />
       </Pressable>
     </View>

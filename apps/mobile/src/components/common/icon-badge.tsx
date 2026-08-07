@@ -20,10 +20,8 @@ export function IconBadge({
 }: IconBadgeProps) {
   return (
     <View
-      style={[
-        styles.badge,
-        { width: size, height: size, backgroundColor, borderRadius: size / 3 },
-      ]}>
+      style={[styles.badge, { width: size, height: size, backgroundColor, borderRadius: size / 3 }]}
+    >
       <Feather name={icon} size={iconSize} color={color} />
     </View>
   );

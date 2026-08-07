@@ -50,7 +50,7 @@ async function adopt(session: Session): Promise<Partial<SessionState>> {
   };
 }
 
-export const useSessionStore = create<SessionState>((set, get) => ({
+export const useSessionStore = create<SessionState>((set) => ({
   status: 'loading',
   user: null,
   shop: null,

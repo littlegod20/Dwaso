@@ -10,7 +10,7 @@ import type { Database } from '../../db/client.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
 import { nextSeq, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
-import { productStock, products, stockMovements } from '../../db/schema/index.js';
+import { stockMovements } from '../../db/schema/index.js';
 import { applyStockDelta } from '../projections/service.js';
 import * as catalogRepo from '../catalog/repo.js';
 

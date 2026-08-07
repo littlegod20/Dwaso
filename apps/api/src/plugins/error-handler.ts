@@ -1,6 +1,9 @@
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import { hasZodFastifySchemaValidationErrors, isResponseSerializationError } from 'fastify-type-provider-zod';
+import {
+  hasZodFastifySchemaValidationErrors,
+  isResponseSerializationError,
+} from 'fastify-type-provider-zod';
 import { AppError, type ErrorResponse } from '../lib/errors.js';
 
 function respond(reply: FastifyReply, status: number, body: ErrorResponse) {

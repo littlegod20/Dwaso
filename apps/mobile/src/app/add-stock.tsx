@@ -78,7 +78,8 @@ export default function AddStockScreen() {
         <View style={styles.stepperRow}>
           <Pressable
             onPress={() => setQuantity((value) => Math.max(1, value - 1))}
-            style={[styles.stepperButton, { backgroundColor: theme.backgroundElement }]}>
+            style={[styles.stepperButton, { backgroundColor: theme.backgroundElement }]}
+          >
             <Feather name="minus" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="title" style={styles.stepperValue}>
@@ -86,7 +87,8 @@ export default function AddStockScreen() {
           </ThemedText>
           <Pressable
             onPress={() => setQuantity((value) => value + 1)}
-            style={[styles.stepperButton, { backgroundColor: theme.primary }]}>
+            style={[styles.stepperButton, { backgroundColor: theme.primary }]}
+          >
             <Feather name="plus" size={20} color={theme.primaryText} />
           </Pressable>
         </View>
@@ -113,7 +115,8 @@ export default function AddStockScreen() {
 
       <Card
         borderColor={theme.primary}
-        style={[styles.summaryCard, { backgroundColor: theme.warningBg }]}>
+        style={[styles.summaryCard, { backgroundColor: theme.warningBg }]}
+      >
         <ThemedText type="default">New stock level</ThemedText>
         <ThemedText type="default" themeColor="primary" style={styles.summaryValue}>
           {product.quantity + quantity} {product.unit}

@@ -23,8 +23,18 @@ export function MapPlaceholder() {
       </View>
 
       <Feather name="map-pin" size={26} color="#8C8577" style={[styles.pin, styles.pinTopRight]} />
-      <Feather name="map-pin" size={26} color="#8C8577" style={[styles.pin, styles.pinBottomRight]} />
-      <Feather name="map-pin" size={32} color="#E29D3A" style={[styles.pin, styles.pinHighlighted]} />
+      <Feather
+        name="map-pin"
+        size={26}
+        color="#8C8577"
+        style={[styles.pin, styles.pinBottomRight]}
+      />
+      <Feather
+        name="map-pin"
+        size={32}
+        color="#E29D3A"
+        style={[styles.pin, styles.pinHighlighted]}
+      />
     </View>
   );
 }

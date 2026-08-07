@@ -17,7 +17,8 @@ export function Avatar({ label, color, backgroundColor, icon, size = 44 }: Avata
       style={[
         styles.circle,
         { width: size, height: size, borderRadius: size / 2, backgroundColor },
-      ]}>
+      ]}
+    >
       {icon ? (
         <Feather name={icon} size={size * 0.5} color={color} />
       ) : (

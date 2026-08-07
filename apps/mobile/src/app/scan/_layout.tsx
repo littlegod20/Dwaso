@@ -5,7 +5,10 @@ export default function ScanLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="recognized" />
-      <Stack.Screen name="confirm" options={{ presentation: 'transparentModal', animation: 'fade' }} />
+      <Stack.Screen
+        name="confirm"
+        options={{ presentation: 'transparentModal', animation: 'fade' }}
+      />
     </Stack>
   );
 }

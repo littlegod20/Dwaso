@@ -66,7 +66,10 @@ class WhatsAppSender implements MessageSender {
 class SmsSender implements MessageSender {
   readonly channel = 'sms' as const;
 
-  constructor(private readonly env: Env, private readonly log: FastifyBaseLogger) {}
+  constructor(
+    private readonly env: Env,
+    private readonly log: FastifyBaseLogger,
+  ) {}
 
   async send(message: OutboundMessage): Promise<DeliveryResult> {
     const provider = createSmsProvider(this.env, this.log);

@@ -11,7 +11,12 @@ import type { Database } from '../../db/client.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
 import { normalisePhone, type CountryCode } from '../../lib/phone.js';
-import { nextSeq, reserveSeqBlock, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
+import {
+  nextSeq,
+  reserveSeqBlock,
+  withTenantTransaction,
+  type TenantContext,
+} from '../../lib/tenant.js';
 import { creditLedgerEntries, creditorBalances, creditors, shops } from '../../db/schema/index.js';
 import { applyCreditDelta } from '../projections/service.js';
 

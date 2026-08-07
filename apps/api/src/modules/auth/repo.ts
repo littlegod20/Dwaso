@@ -35,7 +35,12 @@ export async function createUser(db: Executor, phone: string) {
 
 export async function upsertDevice(
   db: Executor,
-  input: { id: string; userId: string; label?: string; platform: 'ios' | 'android' | 'web' | 'unknown' },
+  input: {
+    id: string;
+    userId: string;
+    label?: string;
+    platform: 'ios' | 'android' | 'web' | 'unknown';
+  },
 ) {
   const [device] = await db
     .insert(devices)

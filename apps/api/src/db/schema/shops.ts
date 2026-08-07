@@ -1,4 +1,14 @@
-import { bigint, index, integer, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { users } from './identity.js';
 
 export const currencyEnum = pgEnum('currency', ['GHS', 'NGN', 'USD', 'EUR']);

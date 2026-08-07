@@ -62,7 +62,8 @@ export default function VerifyScreen() {
       style={[
         styles.container,
         { paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three },
-      ]}>
+      ]}
+    >
       <OnboardingNav onBack={() => router.back()} />
 
       <View style={styles.body}>

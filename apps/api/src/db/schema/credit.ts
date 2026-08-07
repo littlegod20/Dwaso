@@ -1,13 +1,4 @@
-import {
-  boolean,
-  date,
-  index,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { boolean, date, index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { moneyMinor, syncColumns, tenantColumns } from './columns.js';
 
 export const creditorSourceEnum = pgEnum('creditor_source', ['manual', 'contact_import']);

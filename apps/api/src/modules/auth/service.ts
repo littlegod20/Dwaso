@@ -107,7 +107,12 @@ export class AuthService {
   private async issueSession(
     user: { id: string; phone: string; displayName: string | null },
     deviceId: string,
-    membership: { shopId: string; role: 'owner' | 'staff'; shopName: string; currency: string } | null,
+    membership: {
+      shopId: string;
+      role: 'owner' | 'staff';
+      shopName: string;
+      currency: string;
+    } | null,
   ): Promise<Session> {
     const accessToken = this.app.jwt.sign({
       sub: user.id,
@@ -131,9 +136,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      expiresAt: new Date(
-        Date.now() + this.app.env.ACCESS_TOKEN_TTL_SECONDS * 1000,
-      ).toISOString(),
+      expiresAt: new Date(Date.now() + this.app.env.ACCESS_TOKEN_TTL_SECONDS * 1000).toISOString(),
       user: { id: user.id, phone: user.phone, displayName: user.displayName },
       shop: membership
         ? { id: membership.shopId, name: membership.shopName, currency: membership.currency }

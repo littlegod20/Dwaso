@@ -39,21 +39,32 @@ export async function privacyRoutes(app: FastifyInstance) {
       const tenant = requireTenant(request.tenant);
       tenant.requireOwner('export shop data');
 
-      const scoped = <T extends { shopId: unknown }>(table: T) => eq(table.shopId as never, tenant.shopId);
+      const scoped = <T extends { shopId: unknown }>(table: T) =>
+        eq(table.shopId as never, tenant.shopId);
 
-      const [shop, productRows, barcodeRows, movementRows, saleRows, saleItemRows, creditorRows, ledgerRows, supplierRows, auditRows] =
-        await Promise.all([
-          app.db.select().from(shops).where(eq(shops.id, tenant.shopId)),
-          app.db.select().from(products).where(scoped(products)),
-          app.db.select().from(productBarcodes).where(scoped(productBarcodes)),
-          app.db.select().from(stockMovements).where(scoped(stockMovements)),
-          app.db.select().from(sales).where(scoped(sales)),
-          app.db.select().from(saleItems).where(scoped(saleItems)),
-          app.db.select().from(creditors).where(scoped(creditors)),
-          app.db.select().from(creditLedgerEntries).where(scoped(creditLedgerEntries)),
-          app.db.select().from(suppliers).where(scoped(suppliers)),
-          app.db.select().from(auditLog).where(scoped(auditLog)),
-        ]);
+      const [
+        shop,
+        productRows,
+        barcodeRows,
+        movementRows,
+        saleRows,
+        saleItemRows,
+        creditorRows,
+        ledgerRows,
+        supplierRows,
+        auditRows,
+      ] = await Promise.all([
+        app.db.select().from(shops).where(eq(shops.id, tenant.shopId)),
+        app.db.select().from(products).where(scoped(products)),
+        app.db.select().from(productBarcodes).where(scoped(productBarcodes)),
+        app.db.select().from(stockMovements).where(scoped(stockMovements)),
+        app.db.select().from(sales).where(scoped(sales)),
+        app.db.select().from(saleItems).where(scoped(saleItems)),
+        app.db.select().from(creditors).where(scoped(creditors)),
+        app.db.select().from(creditLedgerEntries).where(scoped(creditLedgerEntries)),
+        app.db.select().from(suppliers).where(scoped(suppliers)),
+        app.db.select().from(auditLog).where(scoped(auditLog)),
+      ]);
 
       return {
         exportedAt: new Date().toISOString(),

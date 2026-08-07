@@ -19,14 +19,20 @@ export function QuickActionButton({ icon, label, onPress, highlighted }: QuickAc
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      style={({ pressed }) => [styles.container, pressed && onPress && styles.pressed]}>
+      style={({ pressed }) => [styles.container, pressed && onPress && styles.pressed]}
+    >
       <View
         style={[
           styles.iconSquare,
           highlighted
             ? { backgroundColor: theme.primary }
-            : { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: StyleSheet.hairlineWidth * 2 },
-        ]}>
+            : {
+                backgroundColor: theme.backgroundElement,
+                borderColor: theme.border,
+                borderWidth: StyleSheet.hairlineWidth * 2,
+              },
+        ]}
+      >
         <Feather name={icon} size={22} color={highlighted ? theme.primaryText : theme.text} />
       </View>
       <ThemedText type="small" themeColor="textSecondary" style={styles.label} numberOfLines={1}>

@@ -1,5 +1,9 @@
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
-import { EMBEDDING_DIMENSIONS, type ScanMatchRequest, type ScanMatchResponse } from '@dwaso/shared-types';
+import {
+  EMBEDDING_DIMENSIONS,
+  type ScanMatchRequest,
+  type ScanMatchResponse,
+} from '@dwaso/shared-types';
 import type { Database } from '../../db/client.js';
 import { newId, sha256 } from '../../lib/ids.js';
 import { todayInShop } from '../../lib/time.js';
@@ -155,9 +159,7 @@ export class ScanService {
       imageHash,
     });
 
-    const candidates = result.matchedProductId
-      ? []
-      : await this.recentProducts(tenant);
+    const candidates = result.matchedProductId ? [] : await this.recentProducts(tenant);
 
     return this.respond(
       scanEventId,
@@ -304,9 +306,7 @@ export class ScanService {
     const [row] = await tenant.db
       .select({ productId: productImages.productId })
       .from(productImages)
-      .where(
-        and(eq(productImages.shopId, tenant.shopId), eq(productImages.contentHash, imageHash)),
-      )
+      .where(and(eq(productImages.shopId, tenant.shopId), eq(productImages.contentHash, imageHash)))
       .limit(1);
 
     return row?.productId ? { productId: row.productId } : null;

@@ -52,7 +52,8 @@ export function PaymentTimeline({ history }: PaymentTimelineProps) {
               <ThemedText
                 type="smallBold"
                 themeColor={increasesDebt ? 'danger' : 'success'}
-                style={styles.amount}>
+                style={styles.amount}
+              >
                 {format(entry.amountMinor, { showSign: true })}
               </ThemedText>
             </View>

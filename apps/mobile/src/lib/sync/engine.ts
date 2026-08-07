@@ -1,12 +1,16 @@
 import * as Network from 'expo-network';
-import type {
-  SyncChange,
-  SyncPullResponse,
-  SyncPushResponse,
-} from '@dwaso/shared-types';
+import type { SyncChange, SyncPullResponse, SyncPushResponse } from '@dwaso/shared-types';
 import { ApiError, apiRequest } from '../api/client';
 import { getDeviceId } from '../auth/tokens';
-import { ENTITY_TABLES, META_KEYS, getDatabase, getMeta, resetSyncedData, setMeta, toSqlite } from '../db';
+import {
+  ENTITY_TABLES,
+  META_KEYS,
+  getDatabase,
+  getMeta,
+  resetSyncedData,
+  setMeta,
+  toSqlite,
+} from '../db';
 import {
   pendingMutations,
   recordAttempt,

@@ -7,10 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { PaperDarkTheme, PaperLightTheme } from '@/constants/paper-theme';
-import {
-  addNotificationResponseListener,
-  registerForPushNotifications,
-} from '@/lib/notifications';
+import { addNotificationResponseListener, registerForPushNotifications } from '@/lib/notifications';
 import { SyncProvider } from '@/lib/sync/provider';
 import { useSessionStore } from '@/stores/session';
 

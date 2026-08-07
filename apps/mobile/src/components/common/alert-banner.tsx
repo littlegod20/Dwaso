@@ -15,14 +15,23 @@ type AlertBannerProps = {
 
 export function AlertBanner({ icon, variant, title, subtitle, onPress }: AlertBannerProps) {
   const theme = useTheme();
-  const colors = variant === 'warning'
-    ? { bg: theme.warningBg, fg: theme.warning }
-    : { bg: theme.dangerBg, fg: theme.danger };
+  const colors =
+    variant === 'warning'
+      ? { bg: theme.warningBg, fg: theme.warning }
+      : { bg: theme.dangerBg, fg: theme.danger };
 
   return (
     <Card onPress={onPress} borderColor={colors.bg}>
       <ListRow
-        leading={<IconBadge icon={icon} color={colors.fg} backgroundColor={colors.bg} size={44} iconSize={20} />}
+        leading={
+          <IconBadge
+            icon={icon}
+            color={colors.fg}
+            backgroundColor={colors.bg}
+            size={44}
+            iconSize={20}
+          />
+        }
         title={title}
         subtitle={subtitle}
         showChevron={!!onPress}

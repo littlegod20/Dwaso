@@ -59,9 +59,7 @@ export async function notificationRoutes(app: FastifyInstance) {
       await app.db
         .update(pushTokens)
         .set({ disabledAt: new Date() })
-        .where(
-          and(eq(pushTokens.shopId, tenant.shopId), eq(pushTokens.token, request.body.token)),
-        );
+        .where(and(eq(pushTokens.shopId, tenant.shopId), eq(pushTokens.token, request.body.token)));
 
       return reply.status(204).send(null);
     },

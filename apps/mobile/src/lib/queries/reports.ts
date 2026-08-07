@@ -68,9 +68,7 @@ export function useReport(period: ReportPeriod) {
         const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset);
         const row = byDay.get(localDateKey(date));
 
-        labels.push(
-          span > 7 ? String(date.getDate()) : WEEKDAYS[date.getDay()],
-        );
+        labels.push(span > 7 ? String(date.getDate()) : WEEKDAYS[date.getDay()]);
         revenue.push(Number(row?.revenue ?? 0));
         cost.push(Number(row?.cost ?? 0));
       }

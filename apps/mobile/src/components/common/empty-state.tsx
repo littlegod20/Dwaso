@@ -14,7 +14,13 @@ type EmptyStateProps = {
   onActionPress?: () => void;
 };
 
-export function EmptyState({ icon, title, description, actionLabel, onActionPress }: EmptyStateProps) {
+export function EmptyState({
+  icon,
+  title,
+  description,
+  actionLabel,
+  onActionPress,
+}: EmptyStateProps) {
   const theme = useTheme();
 
   return (

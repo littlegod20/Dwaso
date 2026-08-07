@@ -1,5 +1,5 @@
 import type { Redis } from 'ioredis';
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyReply } from 'fastify';
 import type { Env } from '../config/env.js';
 import type { Database } from '../db/client.js';
 import type { TenantContext } from '../lib/tenant.js';

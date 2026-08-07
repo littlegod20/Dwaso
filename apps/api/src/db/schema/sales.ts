@@ -3,7 +3,12 @@ import { moneyMinor, syncColumns, tenantColumns } from './columns.js';
 import { products } from './catalog.js';
 import { creditors } from './credit.js';
 
-export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'credit', 'mobile_money', 'bank']);
+export const paymentMethodEnum = pgEnum('payment_method', [
+  'cash',
+  'credit',
+  'mobile_money',
+  'bank',
+]);
 
 export const sales = pgTable(
   'sales',

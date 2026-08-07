@@ -40,7 +40,9 @@ export class SuppliersService {
    * for the directory half rather than a new screen.
    */
   async nearby(tenant: TenantContext, query: NearbySupplierQuery) {
-    const keyword = query.productId ? await this.productKeyword(tenant, query.productId) : undefined;
+    const keyword = query.productId
+      ? await this.productKeyword(tenant, query.productId)
+      : undefined;
 
     const saved = await this.list(tenant);
     const savedIds = new Set(saved.map((supplier) => supplier.externalId).filter(Boolean));
@@ -54,10 +56,7 @@ export class SuppliersService {
       limit: query.limit,
     });
 
-    const withDistance = (
-      latitude: number | null,
-      longitude: number | null,
-    ): number | null =>
+    const withDistance = (latitude: number | null, longitude: number | null): number | null =>
       latitude !== null && longitude !== null
         ? distanceKm(query.latitude, query.longitude, latitude, longitude)
         : null;
@@ -67,7 +66,10 @@ export class SuppliersService {
         ...supplier,
         distanceKm: withDistance(supplier.latitude, supplier.longitude),
       }))
-      .filter((supplier) => supplier.distanceKm === null || supplier.distanceKm * 1000 <= query.radiusMeters);
+      .filter(
+        (supplier) =>
+          supplier.distanceKm === null || supplier.distanceKm * 1000 <= query.radiusMeters,
+      );
 
     const now = new Date().toISOString();
 

@@ -52,7 +52,10 @@ export type Restock = z.infer<typeof RestockSchema>;
 export const AdjustmentSchema = z.object({
   id: IdSchema.optional(),
   productId: IdSchema,
-  delta: z.number().int().refine((value) => value !== 0, 'Adjustment cannot be zero'),
+  delta: z
+    .number()
+    .int()
+    .refine((value) => value !== 0, 'Adjustment cannot be zero'),
   note: z.string().max(500).optional(),
   occurredAt: TimestampSchema.optional(),
 });

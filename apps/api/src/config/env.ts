@@ -26,12 +26,7 @@ function loadDotEnvFile() {
  * superRefine below, so a missing secret fails at boot rather than at the first
  * request that happens to need it.
  */
-const PRODUCTION_REQUIRED = [
-  'DATABASE_URL',
-  'REDIS_URL',
-  'JWT_SECRET',
-  'CORS_ORIGINS',
-] as const;
+const PRODUCTION_REQUIRED = ['DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'CORS_ORIGINS'] as const;
 
 const EnvSchema = z
   .object({
@@ -50,7 +45,11 @@ const EnvSchema = z
     // Signing key for access tokens. Refresh tokens are opaque and hashed in the
     // database, so this key only protects the 15-minute access window.
     JWT_SECRET: z.string().min(32).optional(),
-    ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(15 * 60),
+    ACCESS_TOKEN_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(15 * 60),
     // Deliberately long: an offline-first device may be off the network for weeks
     // and must still sync on reconnect without forcing a re-login.
     REFRESH_TOKEN_TTL_SECONDS: z.coerce
@@ -61,7 +60,11 @@ const EnvSchema = z
 
     CORS_ORIGINS: z.string().optional(),
 
-    OTP_TTL_SECONDS: z.coerce.number().int().positive().default(5 * 60),
+    OTP_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(5 * 60),
     OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     OTP_LENGTH: z.coerce.number().int().min(4).max(8).default(6),
 
@@ -86,7 +89,11 @@ const EnvSchema = z
     S3_SECRET_ACCESS_KEY: z.string().optional(),
 
     GOOGLE_PLACES_API_KEY: z.string().optional(),
-    PLACES_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(24 * 60 * 60),
+    PLACES_CACHE_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(24 * 60 * 60),
 
     EXPO_ACCESS_TOKEN: z.string().optional(),
 

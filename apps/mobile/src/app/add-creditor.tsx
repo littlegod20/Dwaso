@@ -78,7 +78,8 @@ export default function AddCreditorScreen() {
 
       <Pressable
         onPress={pickContact}
-        style={[styles.contactsRow, { backgroundColor: theme.backgroundElement }]}>
+        style={[styles.contactsRow, { backgroundColor: theme.backgroundElement }]}
+      >
         <IconBadge
           icon="user"
           color={theme.primary}
@@ -131,8 +132,8 @@ export default function AddCreditorScreen() {
           style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
         />
         <ThemedText type="small" themeColor="textSecondary">
-          Needed only if you want to send reminders. Every reminder names your
-          business and tells them how to stop.
+          Needed only if you want to send reminders. Every reminder names your business and tells
+          them how to stop.
         </ThemedText>
       </View>
 

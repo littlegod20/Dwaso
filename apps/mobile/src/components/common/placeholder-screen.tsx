@@ -11,11 +11,7 @@ type PlaceholderScreenProps = {
 export function PlaceholderScreen({ title, showBack = false }: PlaceholderScreenProps) {
   return (
     <ScreenContainer>
-      {showBack ? (
-        <PageHeader title={title} />
-      ) : (
-        <ThemedText type="subtitle">{title}</ThemedText>
-      )}
+      {showBack ? <PageHeader title={title} /> : <ThemedText type="subtitle">{title}</ThemedText>}
       <ThemedText type="default" themeColor="textSecondary">
         This screen is coming up next — reach out once you&apos;re ready to review it.
       </ThemedText>

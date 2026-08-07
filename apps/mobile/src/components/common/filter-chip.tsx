@@ -25,7 +25,8 @@ export function FilterChip({ label, active, onPress }: FilterChipProps) {
               borderColor: theme.border,
               borderWidth: StyleSheet.hairlineWidth * 2,
             },
-      ]}>
+      ]}
+    >
       <ThemedText type="smallBold" style={{ color: active ? theme.primaryText : theme.text }}>
         {label}
       </ThemedText>

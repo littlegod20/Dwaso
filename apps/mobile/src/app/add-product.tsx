@@ -114,7 +114,8 @@ export default function AddProductScreen() {
       {sellPriceMinor > 0 ? (
         <Card
           borderColor={theme.primary}
-          style={[styles.marginCard, { backgroundColor: theme.warningBg }]}>
+          style={[styles.marginCard, { backgroundColor: theme.warningBg }]}
+        >
           <ThemedText type="default">Margin</ThemedText>
           <ThemedText type="default" themeColor="primary" style={styles.marginValue}>
             {marginPercent(sellPriceMinor, costPriceMinor)}%

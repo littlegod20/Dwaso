@@ -30,7 +30,8 @@ export function PageHeader({
       <Pressable
         onPress={onBack ?? (() => router.back())}
         hitSlop={12}
-        style={[styles.iconCircle, { backgroundColor: theme.backgroundElement }]}>
+        style={[styles.iconCircle, { backgroundColor: theme.backgroundElement }]}
+      >
         <Feather name="chevron-left" size={20} color={theme.text} />
       </Pressable>
 
@@ -46,7 +47,8 @@ export function PageHeader({
         <Pressable
           onPress={onRightPress}
           hitSlop={12}
-          style={[styles.iconCircle, { backgroundColor: theme.backgroundElement }]}>
+          style={[styles.iconCircle, { backgroundColor: theme.backgroundElement }]}
+        >
           <Feather name={rightIcon} size={20} color={theme.text} />
         </Pressable>
       ) : (

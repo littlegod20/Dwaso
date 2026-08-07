@@ -126,14 +126,13 @@ export default function ReminderScheduleScreen() {
             <Pressable
               key={option}
               onPress={() => setScope(option)}
-              style={[
-                styles.segment,
-                scope === option ? { backgroundColor: theme.primary } : null,
-              ]}>
+              style={[styles.segment, scope === option ? { backgroundColor: theme.primary } : null]}
+            >
               <ThemedText
                 type="smallBold"
                 style={scope === option ? { color: theme.primaryText } : undefined}
-                themeColor={scope === option ? undefined : 'textSecondary'}>
+                themeColor={scope === option ? undefined : 'textSecondary'}
+              >
                 {option === 'customer' ? 'This customer' : 'Global default'}
               </ThemedText>
             </Pressable>
@@ -156,11 +155,16 @@ export default function ReminderScheduleScreen() {
                   backgroundColor: theme.backgroundElement,
                   borderColor: selected ? theme.primary : theme.backgroundElement,
                 },
-              ]}>
+              ]}
+            >
               {option.id === 'whatsapp' ? (
                 <Ionicons name="logo-whatsapp" size={20} color={theme.text} />
               ) : (
-                <Feather name={option.id === 'sms' ? 'message-square' : 'mail'} size={20} color={theme.text} />
+                <Feather
+                  name={option.id === 'sms' ? 'message-square' : 'mail'}
+                  size={20}
+                  color={theme.text}
+                />
               )}
               <ThemedText type="default" style={styles.sendViaLabel}>
                 {option.label}
@@ -179,7 +183,8 @@ export default function ReminderScheduleScreen() {
                     borderColor: selected ? theme.primary : theme.border,
                     backgroundColor: selected ? theme.primary : 'transparent',
                   },
-                ]}>
+                ]}
+              >
                 {selected && <Feather name="check" size={14} color={theme.primaryText} />}
               </View>
             </Pressable>
@@ -195,11 +200,16 @@ export default function ReminderScheduleScreen() {
           return (
             <View
               key={option.id}
-              style={[styles.timingRow, { backgroundColor: theme.backgroundElement }]}>
+              style={[styles.timingRow, { backgroundColor: theme.backgroundElement }]}
+            >
               <ThemedText type="default" themeColor={enabled ? 'text' : 'textSecondary'}>
                 {option.label}
               </ThemedText>
-              <Switch value={enabled} onValueChange={() => toggle(option.id)} color={theme.primary} />
+              <Switch
+                value={enabled}
+                onValueChange={() => toggle(option.id)}
+                color={theme.primary}
+              />
             </View>
           );
         })}

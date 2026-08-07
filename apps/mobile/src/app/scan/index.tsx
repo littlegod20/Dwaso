@@ -120,7 +120,8 @@ export default function ScanIndexScreen() {
           <Pressable
             onPress={capture}
             disabled={busy || !ready}
-            style={[styles.shutter, { borderColor: theme.primaryText }]}>
+            style={[styles.shutter, { borderColor: theme.primaryText }]}
+          >
             {busy ? (
               <ActivityIndicator color={theme.primaryText} />
             ) : (

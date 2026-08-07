@@ -69,7 +69,10 @@ class ClaudeVisionProvider implements VisionProvider {
 
     const catalogue = request.candidates.length
       ? request.candidates
-          .map((candidate) => `- ${candidate.id}: ${candidate.name}${candidate.category ? ` (${candidate.category})` : ''}`)
+          .map(
+            (candidate) =>
+              `- ${candidate.id}: ${candidate.name}${candidate.category ? ` (${candidate.category})` : ''}`,
+          )
           .join('\n')
       : '(this shop has no products yet)';
 

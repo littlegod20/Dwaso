@@ -100,7 +100,11 @@ export async function authRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const removed = await repo.deleteDevice(app.db, request.auth!.userId, request.params.deviceId);
+      const removed = await repo.deleteDevice(
+        app.db,
+        request.auth!.userId,
+        request.params.deviceId,
+      );
       if (!removed) throw AppError.notFound('Device');
       return reply.status(204).send(null);
     },

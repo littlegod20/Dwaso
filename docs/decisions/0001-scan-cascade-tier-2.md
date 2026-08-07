@@ -18,11 +18,11 @@ handsets our traders actually use.
 `react-native-executorch` (Software Mansion) exposes `useImageEmbeddings` with a
 pre-exported CLIP ViT-B/32 image encoder, including a quantised variant.
 
-| Property | Value |
-| --- | --- |
-| Embedding dimensions | 512 |
-| Input resolution | 224×224 |
-| Variants | `CLIP_VIT_BASE_PATCH32_IMAGE`, `..._QUANTIZED` |
+| Property             | Value                                          |
+| -------------------- | ---------------------------------------------- |
+| Embedding dimensions | 512                                            |
+| Input resolution     | 224×224                                        |
+| Variants             | `CLIP_VIT_BASE_PATCH32_IMAGE`, `..._QUANTIZED` |
 
 Requirements that turned out to be the real constraint:
 

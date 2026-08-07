@@ -21,9 +21,7 @@ export async function drainMessageOutbox(app: FastifyInstance): Promise<number> 
     const rows = await tx
       .select()
       .from(messageOutbox)
-      .where(
-        and(eq(messageOutbox.status, 'pending'), lte(messageOutbox.scheduledFor, new Date())),
-      )
+      .where(and(eq(messageOutbox.status, 'pending'), lte(messageOutbox.scheduledFor, new Date())))
       .orderBy(asc(messageOutbox.scheduledFor))
       .limit(BATCH_SIZE)
       .for('update', { skipLocked: true });
@@ -33,9 +31,7 @@ export async function drainMessageOutbox(app: FastifyInstance): Promise<number> 
     await tx
       .update(messageOutbox)
       .set({ status: 'sending', attempts: sql`${messageOutbox.attempts} + 1` })
-      .where(
-        sql`${messageOutbox.id} = any(${sql.param(rows.map((row) => row.id))}::uuid[])`,
-      );
+      .where(sql`${messageOutbox.id} = any(${sql.param(rows.map((row) => row.id))}::uuid[])`);
 
     return rows;
   });

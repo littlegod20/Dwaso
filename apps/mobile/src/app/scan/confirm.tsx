@@ -64,7 +64,8 @@ export default function ScanConfirmScreen() {
         style={[
           styles.sheet,
           { backgroundColor: theme.card, paddingBottom: insets.bottom + Spacing.three },
-        ]}>
+        ]}
+      >
         <View style={styles.handle} />
 
         <View style={styles.identity}>
@@ -121,7 +122,8 @@ export default function ScanConfirmScreen() {
           <Pressable
             onPress={() => setQuantity((value) => Math.max(1, value - 1))}
             hitSlop={8}
-            style={styles.quantityButton}>
+            style={styles.quantityButton}
+          >
             <Feather name="minus" size={20} color={theme.text} />
           </Pressable>
           <ThemedText type="subtitle">
@@ -130,7 +132,8 @@ export default function ScanConfirmScreen() {
           <Pressable
             onPress={() => setQuantity((value) => value + 1)}
             hitSlop={8}
-            style={styles.quantityButton}>
+            style={styles.quantityButton}
+          >
             <Feather name="plus" size={20} color={theme.text} />
           </Pressable>
         </View>

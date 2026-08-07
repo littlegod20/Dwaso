@@ -56,7 +56,10 @@ export async function listProducts(
 
   // Left join so a product with no movements yet still appears, at zero.
   const rows = await tenant.db
-    .select({ product: products, quantity: sql<number>`coalesce(${productStock.quantity}, 0)::int` })
+    .select({
+      product: products,
+      quantity: sql<number>`coalesce(${productStock.quantity}, 0)::int`,
+    })
     .from(products)
     .leftJoin(
       productStock,
@@ -80,7 +83,10 @@ export async function getProduct(
   productId: string,
 ): Promise<ProductView | null> {
   const [row] = await tenant.db
-    .select({ product: products, quantity: sql<number>`coalesce(${productStock.quantity}, 0)::int` })
+    .select({
+      product: products,
+      quantity: sql<number>`coalesce(${productStock.quantity}, 0)::int`,
+    })
     .from(products)
     .leftJoin(
       productStock,
