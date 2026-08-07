@@ -1,8 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppButton } from '@/components/common/app-button';
 import { IconBadge } from '@/components/common/icon-badge';
 import { ScanTopBar } from '@/components/scan/scan-top-bar';
 import { Viewfinder } from '@/components/scan/viewfinder';
@@ -10,64 +12,127 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getProductById } from '@/mock-data/products';
-import { DEMO_SCAN_RESULT } from '@/mock-data/scan';
+import { useProduct } from '@/lib/queries/products';
+import { useScanStore } from '@/stores/scan';
 import { getStatusMeta } from '@/utils/product-status';
 
 export default function ScanRecognizedScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const product = getProductById(DEMO_SCAN_RESULT.productId);
 
-  if (!product) return null;
+  const candidate = useScanStore((state) => state.candidate);
+  const capturedUri = useScanStore((state) => state.capturedUri);
+  const reset = useScanStore((state) => state.reset);
 
-  const status = getStatusMeta(product.status);
+  const { data: product } = useProduct(candidate?.productId ?? undefined);
+
+  if (!candidate) {
+    router.replace('/scan');
+    return null;
+  }
+
+  const dismiss = () => {
+    reset();
+    router.back();
+  };
+
+  const enrol = () => {
+    reset();
+    router.replace({
+      pathname: '/add-product',
+      params: {
+        name: candidate.suggestion?.name ?? '',
+        category: candidate.suggestion?.category ?? '',
+        barcode: candidate.suggestion?.barcode ?? '',
+      },
+    });
+  };
+
+  const matched = Boolean(product);
+  const status = product ? getStatusMeta(product.status) : null;
 
   return (
     <ThemedView style={styles.container}>
+      {capturedUri ? (
+        <Image source={{ uri: capturedUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+      ) : null}
+
       <View style={{ paddingTop: insets.top + Spacing.two }}>
         <ScanTopBar />
       </View>
 
-      <Pressable style={styles.frameArea} onPress={() => router.push('/scan/confirm')}>
+      <View style={styles.frameArea} pointerEvents="none">
         <Viewfinder
-          filled
+          filled={matched}
           label={
-            <View style={[styles.matchPill, { backgroundColor: theme.primary }]}>
-              <View style={[styles.matchDot, { backgroundColor: theme.primaryText }]} />
-              <ThemedText type="smallBold" style={{ color: theme.primaryText }}>
-                {product.name} · {DEMO_SCAN_RESULT.confidence}%
+            <View
+              style={[
+                styles.matchPill,
+                { backgroundColor: matched ? theme.primary : theme.backgroundElement },
+              ]}>
+              {matched ? (
+                <View style={[styles.matchDot, { backgroundColor: theme.primaryText }]} />
+              ) : null}
+              <ThemedText
+                type="smallBold"
+                style={matched ? { color: theme.primaryText } : undefined}>
+                {matched
+                  ? `${product?.name} · ${Math.round(candidate.confidence * 100)}%`
+                  : candidate.queued
+                    ? 'Will identify when back online'
+                    : 'Not recognised yet'}
               </ThemedText>
             </View>
           }
         />
-      </Pressable>
+      </View>
 
-      <Pressable
-        onPress={() => router.push('/scan/confirm')}
+      <View
         style={[
           styles.peekCard,
           { backgroundColor: theme.card, paddingBottom: insets.bottom + Spacing.three },
         ]}>
         <View style={styles.peekHandle} />
-        <View style={styles.peekRow}>
-          <IconBadge icon="box" color={theme[status.variant]} backgroundColor={theme[`${status.variant}Bg`]} />
-          <View style={styles.peekText}>
+
+        {product && status ? (
+          <Pressable onPress={() => router.push('/scan/confirm')}>
+            <View style={styles.peekRow}>
+              <IconBadge
+                icon="box"
+                color={theme[status.variant]}
+                backgroundColor={theme[`${status.variant}Bg`]}
+              />
+              <View style={styles.peekText}>
+                <ThemedText type="default" style={styles.peekTitle}>
+                  {product.name}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  In stock: {product.quantity} {product.unit}
+                </ThemedText>
+              </View>
+            </View>
+            <View style={styles.swipeUpRow}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Tap for details
+              </ThemedText>
+              <Feather name="chevron-up" size={16} color={theme.textSecondary} />
+            </View>
+          </Pressable>
+        ) : (
+          <View style={styles.unknownBlock}>
             <ThemedText type="default" style={styles.peekTitle}>
-              {product.name}
+              {candidate.suggestion?.name ?? 'New item'}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              In stock: {product.quantity} units
+              {candidate.queued
+                ? 'Saved. It will be identified once you have signal — you can carry on selling.'
+                : 'Add it once and every future scan will be instant.'}
             </ThemedText>
+            <AppButton label="Add this product" icon="plus" onPress={enrol} />
+            <AppButton label="Scan something else" variant="secondary" onPress={dismiss} />
           </View>
-        </View>
-        <View style={styles.swipeUpRow}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Swipe up for details
-          </ThemedText>
-          <Feather name="chevron-up" size={16} color={theme.textSecondary} />
-        </View>
-      </Pressable>
+        )}
+      </View>
     </ThemedView>
   );
 }
@@ -124,5 +189,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 4,
+    paddingTop: Spacing.two,
+  },
+  unknownBlock: {
+    gap: Spacing.two,
   },
 });

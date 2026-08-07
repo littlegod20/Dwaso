@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,11 +10,12 @@ import { StatusPill } from '@/components/common/status-pill';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getProductById } from '@/mock-data/products';
-import { DEMO_SCAN_RESULT } from '@/mock-data/scan';
-import { calculateMargin } from '@/utils/margin';
-import { formatCurrency } from '@/utils/format-currency';
+import { useProduct } from '@/lib/queries/products';
+import { recordSale, useLocalMutation } from '@/lib/mutations';
+import { useScanStore } from '@/stores/scan';
+import { useMoney } from '@/utils/format-currency';
 import { getStatusMeta } from '@/utils/product-status';
+import { marginPercent } from '@dwaso/domain';
 
 const DETAIL_STATUS_LABEL = {
   low: 'Low stock',
@@ -22,13 +25,36 @@ const DETAIL_STATUS_LABEL = {
 export default function ScanConfirmScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const product = getProductById(DEMO_SCAN_RESULT.productId);
+  const { format } = useMoney();
+
+  const candidate = useScanStore((state) => state.candidate);
+  const reset = useScanStore((state) => state.reset);
+  const { data: product } = useProduct(candidate?.productId ?? undefined);
+
+  const [quantity, setQuantity] = useState(1);
+  const sell = useLocalMutation(recordSale);
 
   if (!product) return null;
 
   const status = getStatusMeta(product.status);
-  const margin = calculateMargin(product.costPrice, product.sellPrice);
   const detailLabel = product.status === 'in-stock' ? null : DETAIL_STATUS_LABEL[product.status];
+  const lineTotal = product.sellPriceMinor * quantity;
+
+  /**
+   * The whole cascade exists to end here, in one tap, with the sale recorded
+   * locally. Nothing on this path touches the network.
+   */
+  const confirmSale = () => {
+    sell.mutate(
+      { lines: [{ productId: product.id, quantity }] },
+      {
+        onSuccess: () => {
+          reset();
+          router.dismissTo('/(tabs)');
+        },
+      },
+    );
+  };
 
   return (
     <View style={styles.overlay}>
@@ -42,7 +68,11 @@ export default function ScanConfirmScreen() {
         <View style={styles.handle} />
 
         <View style={styles.identity}>
-          <IconBadge icon="box" color={theme[status.variant]} backgroundColor={theme[`${status.variant}Bg`]} />
+          <IconBadge
+            icon="box"
+            color={theme[status.variant]}
+            backgroundColor={theme[`${status.variant}Bg`]}
+          />
           <View style={styles.identityText}>
             <ThemedText type="default" style={styles.productName}>
               {product.name}
@@ -56,7 +86,7 @@ export default function ScanConfirmScreen() {
             Current stock
           </ThemedText>
           <ThemedText type="title" style={styles.stockNumber}>
-            {product.quantity} units
+            {product.quantity} {product.unit}
           </ThemedText>
         </View>
 
@@ -66,7 +96,7 @@ export default function ScanConfirmScreen() {
               Cost
             </ThemedText>
             <ThemedText type="default" style={styles.statValue}>
-              {formatCurrency(product.costPrice)}
+              {format(product.costPriceMinor)}
             </ThemedText>
           </View>
           <View style={styles.statColumn}>
@@ -74,7 +104,7 @@ export default function ScanConfirmScreen() {
               Sell
             </ThemedText>
             <ThemedText type="default" style={styles.statValue}>
-              {formatCurrency(product.sellPrice)}
+              {format(product.sellPriceMinor)}
             </ThemedText>
           </View>
           <View style={styles.statColumn}>
@@ -82,29 +112,48 @@ export default function ScanConfirmScreen() {
               Margin
             </ThemedText>
             <ThemedText type="default" themeColor="primary" style={styles.statValue}>
-              {margin}%
+              {marginPercent(product.sellPriceMinor, product.costPriceMinor)}%
             </ThemedText>
           </View>
         </View>
 
+        <View style={[styles.quantityRow, { backgroundColor: theme.backgroundElement }]}>
+          <Pressable
+            onPress={() => setQuantity((value) => Math.max(1, value - 1))}
+            hitSlop={8}
+            style={styles.quantityButton}>
+            <Feather name="minus" size={20} color={theme.text} />
+          </Pressable>
+          <ThemedText type="subtitle">
+            {quantity} {product.unit}
+          </ThemedText>
+          <Pressable
+            onPress={() => setQuantity((value) => value + 1)}
+            hitSlop={8}
+            style={styles.quantityButton}>
+            <Feather name="plus" size={20} color={theme.text} />
+          </Pressable>
+        </View>
+
         <AppButton
-          label="Add stock"
-          icon="plus"
-          onPress={() => router.push({ pathname: '/add-stock', params: { id: product.id } })}
+          label={sell.isPending ? 'Recording…' : `Record sale · ${format(lineTotal)}`}
+          icon="check"
+          disabled={sell.isPending}
+          onPress={confirmSale}
         />
 
         <View style={styles.secondaryRow}>
+          <AppButton
+            label="Add stock"
+            variant="secondary"
+            style={styles.secondaryButton}
+            onPress={() => router.push({ pathname: '/add-stock', params: { id: product.id } })}
+          />
           <AppButton
             label="View details"
             variant="secondary"
             style={styles.secondaryButton}
             onPress={() => router.push({ pathname: '/product/[id]', params: { id: product.id } })}
-          />
-          <AppButton
-            label="Edit price"
-            variant="secondary"
-            style={styles.secondaryButton}
-            onPress={() => router.push({ pathname: '/edit-price', params: { id: product.id } })}
           />
         </View>
       </View>
@@ -161,6 +210,20 @@ const styles = StyleSheet.create({
   statValue: {
     fontWeight: '700',
     fontSize: 17,
+  },
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 56,
+    borderRadius: Spacing.three,
+    paddingHorizontal: Spacing.three,
+  },
+  quantityButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   secondaryRow: {
     flexDirection: 'row',
