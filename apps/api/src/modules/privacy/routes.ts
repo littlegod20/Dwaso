@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull, lt } from 'drizzle-orm';
 import { z } from 'zod';
 import { requireTenant } from '../../lib/tenant.js';
 import { AppError } from '../../lib/errors.js';
+import { recordAudit } from '../../lib/audit.js';
 import { nextSeq, withTenantTransaction } from '../../lib/tenant.js';
 import {
   auditLog,
@@ -83,6 +84,72 @@ export async function privacyRoutes(app: FastifyInstance) {
   );
 
   /**
+   * The trail of who moved money, newest first.
+   *
+   * This exists so the owner can settle the argument the audit table was built
+   * for without an engineer running SQL. Staff cannot read it: the whole point
+   * is that it records what they did.
+   */
+  routes.get(
+    '/audit',
+    {
+      schema: {
+        querystring: z.object({
+          before: z.iso.datetime().optional(),
+          limit: z.coerce.number().int().min(1).max(200).default(50),
+        }),
+        response: {
+          200: z.object({
+            entries: z.array(
+              z.object({
+                id: z.uuid(),
+                action: z.string(),
+                entity: z.string().nullable(),
+                entityId: z.uuid().nullable(),
+                deviceId: z.uuid().nullable(),
+                metadata: z.record(z.string(), z.unknown()).nullable(),
+                createdAt: z.iso.datetime(),
+              }),
+            ),
+            nextBefore: z.iso.datetime().nullable(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const tenant = requireTenant(request.tenant);
+      tenant.requireOwner('read the audit trail');
+
+      const rows = await tenant.db
+        .select()
+        .from(auditLog)
+        .where(
+          and(
+            eq(auditLog.shopId, tenant.shopId),
+            request.query.before
+              ? lt(auditLog.createdAt, new Date(request.query.before))
+              : undefined,
+          ),
+        )
+        .orderBy(desc(auditLog.createdAt))
+        .limit(request.query.limit);
+
+      return {
+        entries: rows.map((row) => ({
+          id: row.id,
+          action: row.action,
+          entity: row.entity,
+          entityId: row.entityId,
+          deviceId: row.deviceId,
+          metadata: row.metadata,
+          createdAt: row.createdAt.toISOString(),
+        })),
+        nextBefore: rows.at(-1)?.createdAt.toISOString() ?? null,
+      };
+    },
+  );
+
+  /**
    * Erases one creditor's personal details while keeping the ledger.
    *
    * A subject-access erasure request cannot be allowed to delete the record of a
@@ -138,13 +205,11 @@ export async function privacyRoutes(app: FastifyInstance) {
             ),
           );
 
-        await tx.insert(auditLog).values({
-          shopId: tenant.shopId,
-          userId: tenant.userId,
-          deviceId: tenant.deviceId,
+        await recordAudit(tx, tenant, {
           action: 'creditor.erased',
           entity: 'creditor',
           entityId: request.params.id,
+          metadata: { ledgerEntriesRetained: retained.length },
         });
 
         return { erased: true, ledgerEntriesRetained: retained.length };

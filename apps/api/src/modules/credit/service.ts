@@ -8,6 +8,7 @@ import type {
 } from '@dwaso/shared-types';
 import { creditorTiming } from '@dwaso/domain';
 import type { Database } from '../../db/client.js';
+import { recordAudit } from '../../lib/audit.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
 import { normalisePhone, type CountryCode } from '../../lib/phone.js';
@@ -144,6 +145,16 @@ export class CreditService {
         });
 
         await applyCreditDelta(tx, tenant.shopId, creditorId, opening, null);
+
+        // An opening balance is money asserted rather than money observed —
+        // nobody watched the goods leave — so it is the entry most likely to be
+        // disputed and the one most worth attributing.
+        await recordAudit(tx, tenant, {
+          action: 'creditor.adjusted',
+          entity: 'creditor',
+          entityId: creditorId,
+          metadata: { amountMinor: opening, reason: 'opening_balance' },
+        });
       }
 
       return this.get(scoped, creditorId);
@@ -213,6 +224,13 @@ export class CreditService {
       });
 
       await applyCreditDelta(tx, tenant.shopId, creditorId, -input.amountMinor, occurredAt);
+
+      await recordAudit(tx, tenant, {
+        action: 'payment.recorded',
+        entity: 'creditor',
+        entityId: creditorId,
+        metadata: { amountMinor: input.amountMinor },
+      });
 
       return this.get(scoped, creditorId);
     });

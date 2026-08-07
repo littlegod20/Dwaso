@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { QuickSale, RecordSale, SaleView } from '@dwaso/shared-types';
 import { saleTotals } from '@dwaso/domain';
 import type { Database, Transaction } from '../../db/client.js';
+import { recordAudit } from '../../lib/audit.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
 import { reserveSeqBlock, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
@@ -127,6 +128,17 @@ export class SalesService {
         totals.costTotalMinor,
         1,
       );
+
+      await recordAudit(tx, tenant, {
+        action: 'sale.recorded',
+        entity: 'sale',
+        entityId: saleId,
+        metadata: {
+          totalMinor: totals.totalMinor,
+          paymentMethod: input.paymentMethod,
+          lineCount: lines.length,
+        },
+      });
 
       const view = await this.get(scoped, saleId);
       return view;

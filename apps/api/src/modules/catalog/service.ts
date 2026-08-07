@@ -1,5 +1,6 @@
 import type { CreateProduct, ProductView, UpdatePrice, UpdateProduct } from '@dwaso/shared-types';
 import type { Database } from '../../db/client.js';
+import { recordAudit } from '../../lib/audit.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
 import {
@@ -150,6 +151,18 @@ export class CatalogService {
         occurredAt: new Date(),
         serverSeq: firstSeq + 1,
         updatedByDeviceId: tenant.deviceId,
+      });
+
+      await recordAudit(tx, tenant, {
+        action: 'price.changed',
+        entity: 'product',
+        entityId: productId,
+        metadata: {
+          fromCostMinor: current.costPriceMinor,
+          toCostMinor: nextCost,
+          fromSellMinor: current.sellPriceMinor,
+          toSellMinor: nextSell,
+        },
       });
 
       const view = await repo.getProduct(scoped, productId);

@@ -7,6 +7,7 @@ import type {
 } from '@dwaso/shared-types';
 import { reconciliationDelta, shrinkageValueMinor } from '@dwaso/domain';
 import type { Database } from '../../db/client.js';
+import { recordAudit } from '../../lib/audit.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
 import { nextSeq, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
@@ -117,6 +118,15 @@ export class InventoryService {
         });
 
         await applyStockDelta(tx, tenant.shopId, input.productId, delta);
+
+        // A count that disagrees with the books is the app's only way of saying
+        // stock went missing, so who counted matters as much as the number.
+        await recordAudit(tx, tenant, {
+          action: 'stock.reconciled',
+          entity: 'product',
+          entityId: input.productId,
+          metadata: { expected, counted: input.countedQuantity, delta },
+        });
       }
 
       return {
