@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "tombstone_floor_seq" bigint DEFAULT 0 NOT NULL;
