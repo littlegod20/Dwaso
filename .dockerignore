@@ -1,0 +1,13 @@
+**/node_modules
+**/.turbo
+**/.expo
+**/dist
+**/.git
+**/coverage
+**/*.tsbuildinfo
+apps/mobile
+**/.env
+**/.env.*
+!.env.example
+agent-transcripts
+agent-tools
