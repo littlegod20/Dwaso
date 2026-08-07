@@ -22,7 +22,7 @@ import {
   stockMovements,
 } from '../../db/schema/index.js';
 import { rebuildDailyMetrics } from '../projections/service.js';
-import { withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
+import { withTenantScope, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
 import * as catalogRepo from '../catalog/repo.js';
 
 export class ReportsService {
@@ -36,6 +36,8 @@ export class ReportsService {
    * demand before the range is read.
    */
   async summary(tenant: TenantContext, query: ReportQuery): Promise<ReportSummary> {
+    // Refresh runs in its own transaction first so the read scope below does not
+    // hold a connection open across a write that needs another one from the pool.
     const shop = await this.loadShop(tenant);
     const today = todayInShop(shop.timezone);
     const endDate = query.endDate ?? today;
@@ -44,52 +46,54 @@ export class ReportsService {
       await this.refreshDay(tenant, shop.timezone, today);
     }
 
-    const startDate = periodStart(endDate, query.period);
-    const span = periodLengthDays(query.period);
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const startDate = periodStart(endDate, query.period);
+      const span = periodLengthDays(query.period);
 
-    const previousEnd = addDays(startDate, -1);
-    const previousStart = periodStart(previousEnd, query.period);
+      const previousEnd = addDays(startDate, -1);
+      const previousStart = periodStart(previousEnd, query.period);
 
-    const [current, previous] = await Promise.all([
-      this.readRange(tenant, startDate, endDate),
-      this.readRange(tenant, previousStart, previousEnd),
-    ]);
+      const [current, previous] = await Promise.all([
+        this.readRange(scoped, startDate, endDate),
+        this.readRange(scoped, previousStart, previousEnd),
+      ]);
 
-    // Zero-fill so a chart of the last seven days always has seven bars, with
-    // quiet days visibly quiet rather than missing.
-    const byDate = new Map(current.map((row) => [row.date, row]));
-    const buckets = dateRange(startDate, endDate).map((date) => {
-      const row = byDate.get(date);
+      // Zero-fill so a chart of the last seven days always has seven bars, with
+      // quiet days visibly quiet rather than missing.
+      const byDate = new Map(current.map((row) => [row.date, row]));
+      const buckets = dateRange(startDate, endDate).map((date) => {
+        const row = byDate.get(date);
+        return {
+          date,
+          revenueMinor: row?.revenueMinor ?? 0,
+          costMinor: row?.costMinor ?? 0,
+          profitMinor: row?.profitMinor ?? 0,
+          salesCount: row?.salesCount ?? 0,
+        };
+      });
+
+      const totals = sum(buckets);
+      const previousTotals = sum(previous);
+
       return {
-        date,
-        revenueMinor: row?.revenueMinor ?? 0,
-        costMinor: row?.costMinor ?? 0,
-        profitMinor: row?.profitMinor ?? 0,
-        salesCount: row?.salesCount ?? 0,
+        period: query.period,
+        startDate,
+        endDate,
+        buckets: buckets.slice(-span),
+        revenueMinor: totals.revenueMinor,
+        costMinor: totals.costMinor,
+        profitMinor: totals.profitMinor,
+        marginPercent: marginPercent(totals.revenueMinor, totals.costMinor),
+        previous: {
+          revenueMinor: previousTotals.revenueMinor,
+          costMinor: previousTotals.costMinor,
+          profitMinor: previousTotals.profitMinor,
+          marginPercent: marginPercent(previousTotals.revenueMinor, previousTotals.costMinor),
+        },
+        revenueChangePercent: changePercent(totals.revenueMinor, previousTotals.revenueMinor),
+        profitChangePercent: changePercent(totals.profitMinor, previousTotals.profitMinor),
       };
     });
-
-    const totals = sum(buckets);
-    const previousTotals = sum(previous);
-
-    return {
-      period: query.period,
-      startDate,
-      endDate,
-      buckets: buckets.slice(-span),
-      revenueMinor: totals.revenueMinor,
-      costMinor: totals.costMinor,
-      profitMinor: totals.profitMinor,
-      marginPercent: marginPercent(totals.revenueMinor, totals.costMinor),
-      previous: {
-        revenueMinor: previousTotals.revenueMinor,
-        costMinor: previousTotals.costMinor,
-        profitMinor: previousTotals.profitMinor,
-        marginPercent: marginPercent(previousTotals.revenueMinor, previousTotals.costMinor),
-      },
-      revenueChangePercent: changePercent(totals.revenueMinor, previousTotals.revenueMinor),
-      profitChangePercent: changePercent(totals.profitMinor, previousTotals.profitMinor),
-    };
   }
 
   /**
@@ -104,37 +108,39 @@ export class ReportsService {
 
     await this.refreshDay(tenant, shop.timezone, today);
 
-    const [metrics, lowStockNames, overdue, activity] = await Promise.all([
-      this.readRange(tenant, yesterday, today),
-      catalogRepo.countLowStock(tenant),
-      this.overdueCredit(tenant, today),
-      this.recentActivity(tenant),
-    ]);
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const [metrics, lowStockNames, overdue, activity] = await Promise.all([
+        this.readRange(scoped, yesterday, today),
+        catalogRepo.countLowStock(scoped),
+        this.overdueCredit(scoped, today),
+        this.recentActivity(scoped),
+      ]);
 
-    const todayMetrics = metrics.find((row) => row.date === today);
-    const yesterdayMetrics = metrics.find((row) => row.date === yesterday);
+      const todayMetrics = metrics.find((row) => row.date === today);
+      const yesterdayMetrics = metrics.find((row) => row.date === yesterday);
 
-    return {
-      businessName: shop.name,
-      currency: shop.currency,
-      today: {
-        revenueMinor: todayMetrics?.revenueMinor ?? 0,
-        costMinor: todayMetrics?.costMinor ?? 0,
-        profitMinor: todayMetrics?.profitMinor ?? 0,
-        changeVsYesterdayPercent: changePercent(
-          todayMetrics?.profitMinor ?? 0,
-          yesterdayMetrics?.profitMinor ?? 0,
-        ),
-      },
-      lowStock: {
-        count: lowStockNames.length,
-        // Enough to name the situation in the alert card without shipping the
-        // whole catalog to render a summary line.
-        productNames: lowStockNames.slice(0, 5),
-      },
-      overdueCredit: overdue,
-      recentActivity: activity,
-    };
+      return {
+        businessName: shop.name,
+        currency: shop.currency,
+        today: {
+          revenueMinor: todayMetrics?.revenueMinor ?? 0,
+          costMinor: todayMetrics?.costMinor ?? 0,
+          profitMinor: todayMetrics?.profitMinor ?? 0,
+          changeVsYesterdayPercent: changePercent(
+            todayMetrics?.profitMinor ?? 0,
+            yesterdayMetrics?.profitMinor ?? 0,
+          ),
+        },
+        lowStock: {
+          count: lowStockNames.length,
+          // Enough to name the situation in the alert card without shipping the
+          // whole catalog to render a summary line.
+          productNames: lowStockNames.slice(0, 5),
+        },
+        overdueCredit: overdue,
+        recentActivity: activity,
+      };
+    });
   }
 
   private async refreshDay(tenant: TenantContext, timezone: string, date: string) {

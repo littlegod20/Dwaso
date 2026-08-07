@@ -12,7 +12,12 @@ import type {
 import { isEventEntity } from '@dwaso/shared-types';
 import type { Database, Transaction } from '../../db/client.js';
 import { AppError } from '../../lib/errors.js';
-import { reserveSeqBlock, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
+import {
+  reserveSeqBlock,
+  withTenantScope,
+  withTenantTransaction,
+  type TenantContext,
+} from '../../lib/tenant.js';
 import { dayBoundsUtc, shopDate } from '../../lib/time.js';
 import { shops, syncDeviceState, syncMutations } from '../../db/schema/index.js';
 import {
@@ -85,14 +90,20 @@ export class SyncService {
         const assignedSeq = seq;
         seq += 1;
 
+        // Each mutation runs in a nested transaction (a Postgres savepoint) so a
+        // foreign-key failure — the classic out-of-order case of a stock movement
+        // arriving before its product — rejects that one row without aborting the
+        // rest of the batch.
         try {
-          const outcome = await this.applyMutation(
-            tx,
-            tenant,
-            shop.timezone,
-            mutation,
-            assignedSeq,
-            affected,
+          const outcome = await tx.transaction(async (inner) =>
+            this.applyMutation(
+              inner,
+              tenant.withExecutor(inner),
+              shop.timezone,
+              mutation,
+              assignedSeq,
+              affected,
+            ),
           );
 
           results.push({
@@ -173,11 +184,25 @@ export class SyncService {
     }
 
     const values = deserialisePayload(entry.table, mutation.payload as Record<string, unknown>);
-    this.trackAffected(mutation, values, timezone, affected);
 
-    return isEventEntity(mutation.entity)
-      ? this.applyEventMutation(tx, tenant, mutation, values, seq)
-      : this.applyMutableMutation(tx, tenant, mutation, values, seq);
+    // The shop row is the tenant itself and is not part of the replicated change
+    // stream. Renames go through /shops, not through sync.
+    if (mutation.entity === 'shop') {
+      throw AppError.badRequest('Shop updates are not synced; use the shops endpoint');
+    }
+
+    const outcome = isEventEntity(mutation.entity)
+      ? await this.applyEventMutation(tx, tenant, mutation, values, seq)
+      : await this.applyMutableMutation(tx, tenant, mutation, values, seq);
+
+    // Only rebuild projections for mutations that actually landed. A rejected
+    // stock movement for an unknown product must not try to upsert a stock row
+    // that would itself violate the foreign key.
+    if (outcome.status === 'applied') {
+      this.trackAffected(mutation, values, timezone, affected);
+    }
+
+    return outcome;
   }
 
   private async applyEventMutation(
@@ -195,6 +220,7 @@ export class SyncService {
 
     const entry = ENTITY_REGISTRY[mutation.entity];
     const columns = syncColumnsOf(entry.table);
+    if (!columns) throw AppError.badRequest(`${mutation.entity} cannot be pushed`);
 
     const inserted = await tx
       .insert(entry.table)
@@ -230,6 +256,8 @@ export class SyncService {
   ): Promise<MutationOutcome> {
     const entry = ENTITY_REGISTRY[mutation.entity];
     const columns = syncColumnsOf(entry.table);
+    if (!columns) throw AppError.badRequest(`${mutation.entity} cannot be pushed`);
+
     const clientTimestamp = new Date(mutation.clientTimestamp);
 
     const [existing] = await tx
@@ -321,69 +349,81 @@ export class SyncService {
    * before the sale that owns it.
    */
   async pull(tenant: TenantContext, since: number, limit: number): Promise<SyncPullResponse> {
-    const [shop] = await tenant.db
-      .select({ seq: shops.seq, floor: shops.tombstoneFloorSeq })
-      .from(shops)
-      .where(eq(shops.id, tenant.shopId))
-      .limit(1);
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const [shop] = await scoped.db
+        .select({ seq: shops.seq, floor: shops.tombstoneFloorSeq })
+        .from(shops)
+        .where(eq(shops.id, tenant.shopId))
+        .limit(1);
 
-    if (!shop) throw AppError.notFound('Shop');
+      if (!shop) throw AppError.notFound('Shop');
 
-    // A device whose cursor predates the purged tombstones cannot be told what
-    // it missed, because the rows recording those deletions are gone. Rebuilding
-    // from scratch is the only answer that leaves it consistent.
-    if (since > 0 && since < shop.floor) {
-      return { changes: [], nextCursor: shop.seq, hasMore: false, resyncRequired: true };
-    }
-
-    const collected: SyncChange[] = [];
-
-    for (const entity of Object.keys(ENTITY_REGISTRY) as SyncEntity[]) {
-      const entry = ENTITY_REGISTRY[entity];
-      const columns = syncColumnsOf(entry.table);
-
-      // Taking `limit` rows from each table guarantees the globally lowest
-      // `limit` are all present in the union, so the merge below is exact.
-      const rows = (await tenant.db
-        .select()
-        .from(entry.table)
-        .where(and(eq(columns.shopId, tenant.shopId), gt(columns.serverSeq, since)))
-        .orderBy(asc(columns.serverSeq))
-        .limit(limit)) as unknown as Record<string, unknown>[];
-
-      for (const row of rows) {
-        const deletedAt = row.deletedAt as Date | null;
-
-        collected.push({
-          entity,
-          id: row.id as string,
-          serverSeq: Number(row.serverSeq),
-          deletedAt: deletedAt ? deletedAt.toISOString() : null,
-          // A tombstone carries no payload. The client only needs to know the
-          // row is gone, and shipping its former contents would re-transmit
-          // data the trader deliberately deleted.
-          data: deletedAt ? null : serialiseRow(row),
-        });
+      // A device whose cursor predates the purged tombstones cannot be told what
+      // it missed, because the rows recording those deletions are gone. Rebuilding
+      // from scratch is the only answer that leaves it consistent.
+      if (since > 0 && since < shop.floor) {
+        return { changes: [], nextCursor: shop.seq, hasMore: false, resyncRequired: true };
       }
-    }
 
-    collected.sort((a, b) => a.serverSeq - b.serverSeq);
+      const collected: SyncChange[] = [];
 
-    const page = collected.slice(0, limit);
-    const hasMore = collected.length > limit;
-    const nextCursor = page.length ? page[page.length - 1].serverSeq : since;
+      for (const entity of Object.keys(ENTITY_REGISTRY) as SyncEntity[]) {
+        const entry = ENTITY_REGISTRY[entity];
+        const columns = syncColumnsOf(entry.table);
+        // Shop is the tenant row and has no shop_id / server_seq; see syncColumnsOf.
+        if (!columns) continue;
 
-    return { changes: page, nextCursor, hasMore, resyncRequired: false };
+        // Fetch one extra row per table so a full page is distinguishable from
+        // a short one. Taking exactly `limit` would make a shop with twelve
+        // products and a page size of five look finished after the first page.
+        const rows = (await scoped.db
+          .select()
+          .from(entry.table)
+          .where(and(eq(columns.shopId, tenant.shopId), gt(columns.serverSeq, since)))
+          .orderBy(asc(columns.serverSeq))
+          .limit(limit + 1)) as unknown as Record<string, unknown>[];
+
+        for (const row of rows) {
+          const deletedAt = row.deletedAt as Date | null;
+
+          collected.push({
+            entity,
+            id: row.id as string,
+            serverSeq: Number(row.serverSeq),
+            deletedAt: deletedAt ? deletedAt.toISOString() : null,
+            // A tombstone carries no payload. The client only needs to know the
+            // row is gone, and shipping its former contents would re-transmit
+            // data the trader deliberately deleted.
+            data: deletedAt ? null : serialiseRow(row),
+          });
+        }
+      }
+
+      collected.sort((a, b) => a.serverSeq - b.serverSeq);
+
+      const page = collected.slice(0, limit);
+      const hasMore = collected.length > limit;
+      const nextCursor = page.length ? page[page.length - 1].serverSeq : since;
+
+      return { changes: page, nextCursor, hasMore, resyncRequired: false };
+    });
   }
 
   async recordPull(tenant: TenantContext, deviceId: string, cursor: number) {
-    await this.db
-      .insert(syncDeviceState)
-      .values({ deviceId, shopId: tenant.shopId, lastPulledSeq: cursor, lastPulledAt: new Date() })
-      .onConflictDoUpdate({
-        target: syncDeviceState.deviceId,
-        set: { lastPulledSeq: cursor, lastPulledAt: new Date() },
-      });
+    await withTenantTransaction(this.db, tenant, async (tx) => {
+      await tx
+        .insert(syncDeviceState)
+        .values({
+          deviceId,
+          shopId: tenant.shopId,
+          lastPulledSeq: cursor,
+          lastPulledAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: syncDeviceState.deviceId,
+          set: { lastPulledSeq: cursor, lastPulledAt: new Date() },
+        });
+    });
   }
 
   private async findAppliedMutations(tx: Transaction, mutationIds: string[]) {

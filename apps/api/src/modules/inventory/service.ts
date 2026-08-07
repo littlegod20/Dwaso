@@ -10,7 +10,12 @@ import type { Database } from '../../db/client.js';
 import { recordAudit } from '../../lib/audit.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
-import { nextSeq, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
+import {
+  nextSeq,
+  withTenantScope,
+  withTenantTransaction,
+  type TenantContext,
+} from '../../lib/tenant.js';
 import { stockMovements } from '../../db/schema/index.js';
 import { applyStockDelta } from '../projections/service.js';
 import * as catalogRepo from '../catalog/repo.js';
@@ -141,18 +146,20 @@ export class InventoryService {
   }
 
   async listMovements(tenant: TenantContext, productId: string, limit = 50) {
-    return tenant.db
-      .select()
-      .from(stockMovements)
-      .where(
-        and(
-          eq(stockMovements.shopId, tenant.shopId),
-          eq(stockMovements.productId, productId),
-          isNull(stockMovements.deletedAt),
-        ),
-      )
-      .orderBy(desc(stockMovements.occurredAt))
-      .limit(limit);
+    return withTenantScope(this.db, tenant, (scoped) =>
+      scoped.db
+        .select()
+        .from(stockMovements)
+        .where(
+          and(
+            eq(stockMovements.shopId, tenant.shopId),
+            eq(stockMovements.productId, productId),
+            isNull(stockMovements.deletedAt),
+          ),
+        )
+        .orderBy(desc(stockMovements.occurredAt))
+        .limit(limit),
+    );
   }
 
   /**
@@ -165,14 +172,15 @@ export class InventoryService {
    * stood, so a count from three weeks ago still reads the way it did then.
    */
   async shrinkageReport(tenant: TenantContext, limit = 50) {
-    const rows = await tenant.db.execute<{
-      product_id: string;
-      product_name: string;
-      delta: number;
-      unit_cost_minor: string | number | null;
-      occurred_at: Date;
-      balance_after: string | number;
-    }>(sql`
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const rows = await scoped.db.execute<{
+        product_id: string;
+        product_name: string;
+        delta: number;
+        unit_cost_minor: string | number | null;
+        occurred_at: Date;
+        balance_after: string | number;
+      }>(sql`
       with movement_history as (
         select
           m.id,
@@ -204,17 +212,18 @@ export class InventoryService {
       limit ${limit}
     `);
 
-    return rows.map((row) => {
-      const counted = Number(row.balance_after);
-      return {
-        productId: row.product_id,
-        productName: row.product_name,
-        countedAt: new Date(row.occurred_at).toISOString(),
-        expected: counted - row.delta,
-        counted,
-        delta: row.delta,
-        valueMinor: shrinkageValueMinor(row.delta, Number(row.unit_cost_minor ?? 0)),
-      };
+      return rows.map((row) => {
+        const counted = Number(row.balance_after);
+        return {
+          productId: row.product_id,
+          productName: row.product_name,
+          countedAt: new Date(row.occurred_at).toISOString(),
+          expected: counted - row.delta,
+          counted,
+          delta: row.delta,
+          valueMinor: shrinkageValueMinor(row.delta, Number(row.unit_cost_minor ?? 0)),
+        };
+      });
     });
   }
 }

@@ -15,6 +15,7 @@ import { normalisePhone, type CountryCode } from '../../lib/phone.js';
 import {
   nextSeq,
   reserveSeqBlock,
+  withTenantScope,
   withTenantTransaction,
   type TenantContext,
 } from '../../lib/tenant.js';
@@ -52,57 +53,61 @@ export class CreditService {
   constructor(private readonly db: Database) {}
 
   async list(tenant: TenantContext, status?: 'all' | 'overdue' | 'upcoming' | 'clear') {
-    const rows = await tenant.db
-      .select({
-        creditor: creditors,
-        balanceMinor: sql<number>`coalesce(${creditorBalances.balanceMinor}, 0)::bigint`,
-        lastPaymentAt: creditorBalances.lastPaymentAt,
-      })
-      .from(creditors)
-      .leftJoin(
-        creditorBalances,
-        and(
-          eq(creditorBalances.creditorId, creditors.id),
-          eq(creditorBalances.shopId, tenant.shopId),
-        ),
-      )
-      .where(and(eq(creditors.shopId, tenant.shopId), isNull(creditors.deletedAt)))
-      .orderBy(creditors.name);
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const rows = await scoped.db
+        .select({
+          creditor: creditors,
+          balanceMinor: sql<number>`coalesce(${creditorBalances.balanceMinor}, 0)::bigint`,
+          lastPaymentAt: creditorBalances.lastPaymentAt,
+        })
+        .from(creditors)
+        .leftJoin(
+          creditorBalances,
+          and(
+            eq(creditorBalances.creditorId, creditors.id),
+            eq(creditorBalances.shopId, tenant.shopId),
+          ),
+        )
+        .where(and(eq(creditors.shopId, tenant.shopId), isNull(creditors.deletedAt)))
+        .orderBy(creditors.name);
 
-    const views = rows.map((row) =>
-      toView(row.creditor, Number(row.balanceMinor), row.lastPaymentAt),
-    );
+      const views = rows.map((row) =>
+        toView(row.creditor, Number(row.balanceMinor), row.lastPaymentAt),
+      );
 
-    if (!status || status === 'all') return views;
-    return views.filter((view) => view.status === status);
+      if (!status || status === 'all') return views;
+      return views.filter((view) => view.status === status);
+    });
   }
 
   async get(tenant: TenantContext, creditorId: string): Promise<CreditorView> {
-    const [row] = await tenant.db
-      .select({
-        creditor: creditors,
-        balanceMinor: sql<number>`coalesce(${creditorBalances.balanceMinor}, 0)::bigint`,
-        lastPaymentAt: creditorBalances.lastPaymentAt,
-      })
-      .from(creditors)
-      .leftJoin(
-        creditorBalances,
-        and(
-          eq(creditorBalances.creditorId, creditors.id),
-          eq(creditorBalances.shopId, tenant.shopId),
-        ),
-      )
-      .where(
-        and(
-          eq(creditors.shopId, tenant.shopId),
-          eq(creditors.id, creditorId),
-          isNull(creditors.deletedAt),
-        ),
-      )
-      .limit(1);
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const [row] = await scoped.db
+        .select({
+          creditor: creditors,
+          balanceMinor: sql<number>`coalesce(${creditorBalances.balanceMinor}, 0)::bigint`,
+          lastPaymentAt: creditorBalances.lastPaymentAt,
+        })
+        .from(creditors)
+        .leftJoin(
+          creditorBalances,
+          and(
+            eq(creditorBalances.creditorId, creditors.id),
+            eq(creditorBalances.shopId, tenant.shopId),
+          ),
+        )
+        .where(
+          and(
+            eq(creditors.shopId, tenant.shopId),
+            eq(creditors.id, creditorId),
+            isNull(creditors.deletedAt),
+          ),
+        )
+        .limit(1);
 
-    if (!row) throw AppError.notFound('Creditor');
-    return toView(row.creditor, Number(row.balanceMinor), row.lastPaymentAt);
+      if (!row) throw AppError.notFound('Creditor');
+      return toView(row.creditor, Number(row.balanceMinor), row.lastPaymentAt);
+    });
   }
 
   async create(tenant: TenantContext, input: CreateCreditor): Promise<CreditorView> {

@@ -6,6 +6,7 @@ import { newId } from '../../lib/ids.js';
 import {
   nextSeq,
   reserveSeqBlock,
+  withTenantScope,
   withTenantTransaction,
   type TenantContext,
 } from '../../lib/tenant.js';
@@ -17,13 +18,15 @@ export class CatalogService {
   constructor(private readonly db: Database) {}
 
   async list(tenant: TenantContext, filter: repo.ProductFilter) {
-    return repo.listProducts(tenant, filter);
+    return withTenantScope(this.db, tenant, (scoped) => repo.listProducts(scoped, filter));
   }
 
   async get(tenant: TenantContext, productId: string): Promise<ProductView> {
-    const product = await repo.getProduct(tenant, productId);
-    if (!product) throw AppError.notFound('Product');
-    return product;
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const product = await repo.getProduct(scoped, productId);
+      if (!product) throw AppError.notFound('Product');
+      return product;
+    });
   }
 
   /**

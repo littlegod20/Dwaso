@@ -153,4 +153,21 @@ export async function withTenantTransaction<T>(
   });
 }
 
+/**
+ * Read-path counterpart to {@link withTenantTransaction}.
+ *
+ * Row-level security is forced even for the table owner, so a SELECT that never
+ * sets `app.shop_id` returns nothing — not "everything", which is the whole
+ * point. Every tenant read has to go through here for the same reason every
+ * write does: forgetting it does not produce a loud error, it produces an
+ * empty shop that looks like a brand-new account.
+ */
+export async function withTenantScope<T>(
+  db: Database,
+  tenant: TenantContext,
+  work: (scoped: TenantContext) => Promise<T>,
+): Promise<T> {
+  return withTenantTransaction(db, tenant, async (_tx, scoped) => work(scoped));
+}
+
 export type { Database, Transaction };

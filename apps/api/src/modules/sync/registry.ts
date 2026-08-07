@@ -85,8 +85,36 @@ const SERVER_OWNED_COLUMNS = new Set([
  * lookup to exactly these six columns keeps that generic code honest instead of
  * casting whole tables to `any`.
  */
-export function syncColumnsOf(table: PgTable) {
+export type SyncColumns = {
+  id: AnyPgColumn;
+  shopId: AnyPgColumn;
+  serverSeq: AnyPgColumn;
+  updatedAt: AnyPgColumn;
+  deletedAt: AnyPgColumn;
+  updatedByDeviceId: AnyPgColumn;
+};
+
+/**
+ * Returns the replication columns, or `null` when the table is not a normal
+ * synced entity.
+ *
+ * The shop row is the tenant itself: it has no `shop_id`, and its `seq` column
+ * is the change-stream cursor rather than a version of the shop. Shop identity
+ * travels with the session, not the pull stream, so callers must skip it.
+ */
+export function syncColumnsOf(table: PgTable): SyncColumns | null {
   const columns = getTableColumns(table) as unknown as Record<string, AnyPgColumn>;
+
+  if (
+    !columns.id ||
+    !columns.shopId ||
+    !columns.serverSeq ||
+    !columns.updatedAt ||
+    !columns.deletedAt ||
+    !columns.updatedByDeviceId
+  ) {
+    return null;
+  }
 
   return {
     id: columns.id,
@@ -106,7 +134,17 @@ export function serialiseRow(row: Record<string, unknown>): Record<string, unkno
     // shopId is implicit: a device only ever syncs one shop, and echoing it
     // would invite a client to think it could change it.
     if (key === 'shopId') continue;
-    data[key] = value instanceof Date ? value.toISOString() : value;
+
+    // postgres.js returns `bigint` columns as JS BigInt. JSON cannot encode
+    // those, and Fastify would 500 the whole pull for one money column. Minor
+    // units fit in a Number for every currency we support.
+    if (typeof value === 'bigint') {
+      data[key] = Number(value);
+    } else if (value instanceof Date) {
+      data[key] = value.toISOString();
+    } else {
+      data[key] = value;
+    }
   }
 
   return data;

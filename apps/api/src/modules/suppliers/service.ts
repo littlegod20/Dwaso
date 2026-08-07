@@ -3,7 +3,12 @@ import type { CreateSupplier, NearbySupplierQuery, SupplierView } from '@dwaso/s
 import type { Database } from '../../db/client.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
-import { nextSeq, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
+import {
+  nextSeq,
+  withTenantScope,
+  withTenantTransaction,
+  type TenantContext,
+} from '../../lib/tenant.js';
 import { distanceKm, type SupplierDirectory } from '../../providers/places.js';
 import { products, suppliers } from '../../db/schema/index.js';
 
@@ -24,13 +29,15 @@ export class SuppliersService {
   ) {}
 
   async list(tenant: TenantContext): Promise<SupplierView[]> {
-    const rows = await tenant.db
-      .select()
-      .from(suppliers)
-      .where(and(eq(suppliers.shopId, tenant.shopId), isNull(suppliers.deletedAt)))
-      .orderBy(suppliers.name);
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const rows = await scoped.db
+        .select()
+        .from(suppliers)
+        .where(and(eq(suppliers.shopId, tenant.shopId), isNull(suppliers.deletedAt)))
+        .orderBy(suppliers.name);
 
-    return rows.map((row) => toView(row, null));
+      return rows.map((row) => toView(row, null));
+    });
   }
 
   /**

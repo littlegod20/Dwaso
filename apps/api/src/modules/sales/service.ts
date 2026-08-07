@@ -5,7 +5,12 @@ import type { Database, Transaction } from '../../db/client.js';
 import { recordAudit } from '../../lib/audit.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
-import { reserveSeqBlock, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
+import {
+  reserveSeqBlock,
+  withTenantScope,
+  withTenantTransaction,
+  type TenantContext,
+} from '../../lib/tenant.js';
 import {
   creditLedgerEntries,
   creditors,
@@ -156,6 +161,23 @@ export class SalesService {
   }
 
   async get(tenant: TenantContext, saleId: string): Promise<SaleView> {
+    return withTenantScope(this.db, tenant, (scoped) => this.getScoped(scoped, saleId));
+  }
+
+  async list(tenant: TenantContext, limit = 50) {
+    return withTenantScope(this.db, tenant, async (scoped) => {
+      const rows = await scoped.db
+        .select()
+        .from(sales)
+        .where(and(eq(sales.shopId, tenant.shopId), isNull(sales.deletedAt)))
+        .orderBy(desc(sales.occurredAt))
+        .limit(limit);
+
+      return Promise.all(rows.map((row) => this.getScoped(scoped, row.id)));
+    });
+  }
+
+  private async getScoped(tenant: TenantContext, saleId: string): Promise<SaleView> {
     const [sale] = await tenant.db
       .select()
       .from(sales)
@@ -192,17 +214,6 @@ export class SalesService {
         unitCostMinor: item.unitCostMinor,
       })),
     };
-  }
-
-  async list(tenant: TenantContext, limit = 50) {
-    const rows = await tenant.db
-      .select()
-      .from(sales)
-      .where(and(eq(sales.shopId, tenant.shopId), isNull(sales.deletedAt)))
-      .orderBy(desc(sales.occurredAt))
-      .limit(limit);
-
-    return Promise.all(rows.map((row) => this.get(tenant, row.id)));
   }
 
   /**

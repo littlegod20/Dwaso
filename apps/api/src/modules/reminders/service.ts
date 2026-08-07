@@ -4,7 +4,12 @@ import { formatMoney } from '@dwaso/domain';
 import type { Database } from '../../db/client.js';
 import { AppError } from '../../lib/errors.js';
 import { newId } from '../../lib/ids.js';
-import { nextSeq, withTenantTransaction, type TenantContext } from '../../lib/tenant.js';
+import {
+  nextSeq,
+  withTenantScope,
+  withTenantTransaction,
+  type TenantContext,
+} from '../../lib/tenant.js';
 import { todayInShop } from '../../lib/time.js';
 import { composeReminder } from '../../providers/messaging.js';
 import {
@@ -19,11 +24,15 @@ export class RemindersService {
   constructor(private readonly db: Database) {}
 
   async listSchedules(tenant: TenantContext) {
-    return tenant.db
-      .select()
-      .from(reminderSchedules)
-      .where(and(eq(reminderSchedules.shopId, tenant.shopId), isNull(reminderSchedules.deletedAt)))
-      .orderBy(desc(reminderSchedules.createdAt));
+    return withTenantScope(this.db, tenant, (scoped) =>
+      scoped.db
+        .select()
+        .from(reminderSchedules)
+        .where(
+          and(eq(reminderSchedules.shopId, tenant.shopId), isNull(reminderSchedules.deletedAt)),
+        )
+        .orderBy(desc(reminderSchedules.createdAt)),
+    );
   }
 
   async upsertSchedule(tenant: TenantContext, input: UpsertReminderSchedule) {
@@ -175,12 +184,14 @@ export class RemindersService {
   }
 
   async listDeliveries(tenant: TenantContext, limit = 50) {
-    return tenant.db
-      .select()
-      .from(messageOutbox)
-      .where(eq(messageOutbox.shopId, tenant.shopId))
-      .orderBy(desc(messageOutbox.createdAt))
-      .limit(limit);
+    return withTenantScope(this.db, tenant, (scoped) =>
+      scoped.db
+        .select()
+        .from(messageOutbox)
+        .where(eq(messageOutbox.shopId, tenant.shopId))
+        .orderBy(desc(messageOutbox.createdAt))
+        .limit(limit),
+    );
   }
 
   private async loadShop(tenant: TenantContext) {
