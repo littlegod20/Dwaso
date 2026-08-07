@@ -11,7 +11,7 @@ export default function OnboardingValue3Screen() {
       stepIndex={2}
       totalSteps={3}
       onBack={() => router.back()}
-      onSkip={() => router.push('/onboarding/business-setup')}
+      onSkip={() => router.push('/onboarding/sign-in')}
       onNext={() => router.push('/onboarding/permissions')}
       nextLabel="Continue"
     />

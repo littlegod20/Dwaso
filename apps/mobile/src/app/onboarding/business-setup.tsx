@@ -1,14 +1,16 @@
-import { router } from 'expo-router';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AlertBanner } from '@/components/common/alert-banner';
 import { AppButton } from '@/components/common/app-button';
 import { FilterChip } from '@/components/common/filter-chip';
-import { OnboardingNav } from '@/components/onboarding/onboarding-nav';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useSessionStore } from '@/stores/session';
+import type { Currency } from '@dwaso/shared-types';
 
 const CURRENCIES = [
   { code: 'GHS', label: '₵ GHS' },
@@ -17,22 +19,43 @@ const CURRENCIES = [
   { code: 'EUR', label: '€ EUR' },
 ] as const;
 
-// TODO: currency selection and the name input are static for now — wire up
-// real form state and persist the choice once this connects to a backend.
-const ACTIVE_CURRENCY = 'GHS';
-
+/**
+ * The last step before the app is usable, and the point at which a shop exists.
+ *
+ * Currency is chosen once here and never again: it applies to every figure in
+ * the product, and letting it vary per transaction would make every total and
+ * margin in the ledger meaningless.
+ */
 export default function OnboardingBusinessSetupScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const completeSetup = useSessionStore((state) => state.completeSetup);
+
+  const [name, setName] = useState('');
+  const [currency, setCurrency] = useState<Currency>('GHS');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setPending(true);
+    setError(null);
+
+    try {
+      await completeSetup({ name: name.trim(), currency });
+      // The auth gate redirects into the tabs once the session reports a shop.
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not set up your shop');
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
     <ThemedView
       style={[
         styles.container,
-        { paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.three },
+        { paddingTop: insets.top + Spacing.four, paddingBottom: insets.bottom + Spacing.three },
       ]}>
-      <OnboardingNav onBack={() => router.back()} />
-
       <View style={styles.header}>
         <ThemedText type="title" style={styles.headline}>
           Set up your shop
@@ -48,8 +71,11 @@ export default function OnboardingBusinessSetupScreen() {
             Business name
           </ThemedText>
           <TextInput
+            value={name}
+            onChangeText={setName}
             placeholder="e.g. Amaka's Provisions"
             placeholderTextColor={theme.textSecondary}
+            autoFocus
             style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
           />
         </View>
@@ -59,19 +85,30 @@ export default function OnboardingBusinessSetupScreen() {
             Currency
           </ThemedText>
           <View style={styles.currencyRow}>
-            {CURRENCIES.map((currency) => (
+            {CURRENCIES.map((option) => (
               <FilterChip
-                key={currency.code}
-                label={currency.label}
-                active={currency.code === ACTIVE_CURRENCY}
+                key={option.code}
+                label={option.label}
+                active={option.code === currency}
+                onPress={() => setCurrency(option.code)}
               />
             ))}
           </View>
+          <ThemedText type="small" themeColor="textSecondary">
+            You can&apos;t change this later, so pick the currency you actually sell in.
+          </ThemedText>
         </View>
+
+        {error ? (
+          <AlertBanner icon="alert-circle" variant="danger" title="Setup failed" subtitle={error} />
+        ) : null}
       </View>
 
-      {/* TODO: submit handler — persist business profile once backend exists */}
-      <AppButton label="Finish setup" onPress={() => router.replace('/(tabs)')} />
+      {pending ? (
+        <ActivityIndicator color={theme.primary} />
+      ) : (
+        <AppButton label="Finish setup" onPress={submit} disabled={name.trim().length === 0} />
+      )}
     </ThemedView>
   );
 }

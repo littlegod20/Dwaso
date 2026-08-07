@@ -10,7 +10,7 @@ export default function OnboardingWelcomeScreen() {
       subtext="Scan a product to log a sale or restock — no spreadsheets, no guesswork on what's running low."
       stepIndex={0}
       totalSteps={3}
-      onSkip={() => router.push('/onboarding/business-setup')}
+      onSkip={() => router.push('/onboarding/sign-in')}
       onNext={() => router.push('/onboarding/value-2')}
     />
   );

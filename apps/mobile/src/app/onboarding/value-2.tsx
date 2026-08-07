@@ -11,7 +11,7 @@ export default function OnboardingValue2Screen() {
       stepIndex={1}
       totalSteps={3}
       onBack={() => router.back()}
-      onSkip={() => router.push('/onboarding/business-setup')}
+      onSkip={() => router.push('/onboarding/sign-in')}
       onNext={() => router.push('/onboarding/value-3')}
     />
   );
