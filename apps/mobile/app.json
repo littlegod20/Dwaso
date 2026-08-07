@@ -34,7 +34,28 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 240
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Dwaso uses the camera to recognise products so you can log a sale without typing."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Dwaso only reads the single contact you pick when adding a customer who owes you."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Dwaso uses your location to find wholesalers near you when stock runs low."
+        }
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

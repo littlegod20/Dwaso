@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 
+import { AlertBanner } from '@/components/common/alert-banner';
+import { EmptyState } from '@/components/common/empty-state';
 import { FilterChip } from '@/components/common/filter-chip';
 import { ListRow } from '@/components/common/list-row';
 import { PageHeader } from '@/components/common/page-header';
@@ -9,61 +13,121 @@ import { MapPlaceholder } from '@/components/suppliers/map-placeholder';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { suppliers } from '@/mock-data/suppliers';
+import { useProduct } from '@/lib/queries/products';
+import { useNearbySuppliers, useSavedSuppliers } from '@/lib/queries/suppliers';
 
-const RESTOCKING_PRODUCT = 'Rice 50kg Bag';
-
+/**
+ * Reached either from the menu or from a low-stock notification, which passes
+ * the product that ran out so the search can be narrowed to wholesalers who
+ * plausibly carry it.
+ */
 export default function SuppliersScreen() {
+  const { productId } = useLocalSearchParams<{ productId?: string }>();
   const theme = useTheme();
+
+  const [view, setView] = useState<'nearby' | 'saved'>('nearby');
+
+  const { data: product } = useProduct(productId);
+  const nearby = useNearbySuppliers({
+    productId,
+    category: product?.category ?? undefined,
+    enabled: view === 'nearby',
+  });
+  const saved = useSavedSuppliers();
+
+  const suppliers = view === 'nearby' ? (nearby.data?.suppliers ?? []) : (saved.data ?? []);
+  const query = view === 'nearby' ? nearby : saved;
+
+  const call = (phone: string | null) => {
+    if (phone) void Linking.openURL(`tel:${phone}`);
+  };
 
   return (
     <ScreenContainer>
       <PageHeader title="Suppliers" />
 
-      <View style={[styles.contextPill, { backgroundColor: theme.warningBg }]}>
-        <Feather name="home" size={14} color={theme.primary} />
-        <ThemedText type="smallBold" themeColor="primary">
-          Restocking: {RESTOCKING_PRODUCT}
-        </ThemedText>
-      </View>
+      {product ? (
+        <View style={[styles.contextPill, { backgroundColor: theme.warningBg }]}>
+          <Feather name="home" size={14} color={theme.primary} />
+          <ThemedText type="smallBold" themeColor="primary">
+            Restocking: {product.name}
+          </ThemedText>
+        </View>
+      ) : null}
 
-      {/* TODO: wire up Map/List toggle — Map view is shown by default for now */}
       <View style={styles.toggleRow}>
-        <FilterChip label="Map" active />
-        <FilterChip label="List" />
+        <FilterChip label="Nearby" active={view === 'nearby'} onPress={() => setView('nearby')} />
+        <FilterChip label="Saved" active={view === 'saved'} onPress={() => setView('saved')} />
       </View>
 
-      <MapPlaceholder />
+      {view === 'nearby' ? <MapPlaceholder /> : null}
 
-      <ThemedText type="small" themeColor="textSecondary" style={styles.caption}>
-        Distance & category shown only — call ahead to confirm current stock.
-      </ThemedText>
+      {query.isLoading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={theme.primary} />
+          <ThemedText type="small" themeColor="textSecondary">
+            Looking around you…
+          </ThemedText>
+        </View>
+      ) : null}
+
+      {query.isError ? (
+        <AlertBanner
+          icon="wifi-off"
+          variant="warning"
+          title="Could not search"
+          subtitle={
+            query.error instanceof Error
+              ? query.error.message
+              : 'Finding suppliers needs a connection.'
+          }
+        />
+      ) : null}
+
+      {nearby.data?.disclaimer && view === 'nearby' ? (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.caption}>
+          {nearby.data.disclaimer}
+        </ThemedText>
+      ) : null}
+
+      {!query.isLoading && !query.isError && suppliers.length === 0 ? (
+        <EmptyState
+          icon="map-pin"
+          title={view === 'nearby' ? 'Nothing found nearby' : 'No saved suppliers'}
+          description={
+            view === 'nearby'
+              ? 'Try again from the market, or save the wholesalers you already use.'
+              : 'Suppliers you save from a search will appear here, even offline.'
+          }
+        />
+      ) : null}
 
       <View style={styles.list}>
         {suppliers.map((supplier) => (
           <ListRow
             key={supplier.id}
             leading={
-              <View
-                style={[
-                  styles.pinBadge,
-                  { backgroundColor: supplier.highlighted ? theme.warningBg : theme.backgroundElement },
-                ]}>
-                <Feather
-                  name="map-pin"
-                  size={20}
-                  color={supplier.highlighted ? theme.primary : theme.textSecondary}
-                />
+              <View style={[styles.pinBadge, { backgroundColor: theme.backgroundElement }]}>
+                <Feather name="map-pin" size={20} color={theme.textSecondary} />
               </View>
             }
             title={supplier.name}
-            subtitle={`${supplier.distanceKm}km away · ${supplier.type} · ${supplier.category}`}
+            subtitle={[
+              supplier.distanceKm != null ? `${supplier.distanceKm.toFixed(1)}km away` : null,
+              supplier.category,
+              supplier.address,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
             subtitleLines={2}
             trailing={
-              // TODO: wire up tel: link once real phone numbers are confirmed
-              <Pressable style={[styles.callButton, { backgroundColor: theme.backgroundElement }]}>
-                <Feather name="phone" size={18} color={theme.primary} />
-              </Pressable>
+              supplier.phone ? (
+                <Pressable
+                  onPress={() => call(supplier.phone)}
+                  style={[styles.callButton, { backgroundColor: theme.backgroundElement }]}>
+                  <Feather name="phone" size={18} color={theme.primary} />
+                </Pressable>
+              ) : undefined
             }
           />
         ))}
@@ -85,6 +149,11 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: 'row',
     gap: Spacing.two,
+  },
+  loading: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.four,
   },
   caption: {
     textAlign: 'center',
